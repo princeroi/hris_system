@@ -39,7 +39,7 @@ export const TABS = [
         label: "Personal Info",
         icon: "👤",
         cols: ["employee_number", "first_name", "middle_name", "last_name", "suffix",
-               "birth_date", "gender", "civil_status", "nationality", "email", "phone_number"],
+            "birth_date", "age", "gender", "civil_status", "nationality", "email", "phone_number"],
     },
     {
         id: "employment",

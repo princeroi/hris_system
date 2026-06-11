@@ -197,8 +197,25 @@ export default function BulkUpload({
     const updateCell = useCallback((rowIdx, col, value) => {
         setRows(prev => {
             const next    = [...prev];
-            const updated = { ...next[rowIdx], [col]: value };
-            next[rowIdx]  = ALWAYS_APPLY_DEFAULTS.has(col)
+            let updated   = { ...next[rowIdx], [col]: value };
+
+            // Auto-compute age whenever birth_date changes
+            if (col === "birth_date") {
+                if (value) {
+                    const birth = new Date(value);
+                    if (!isNaN(birth)) {
+                        const today = new Date();
+                        let age = today.getFullYear() - birth.getFullYear();
+                        const m = today.getMonth() - birth.getMonth();
+                        if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+                        updated.age = age >= 0 ? String(age) : "";
+                    }
+                } else {
+                    updated.age = "";
+                }
+            }
+
+            next[rowIdx] = ALWAYS_APPLY_DEFAULTS.has(col)
                 ? applyRowDefaults(updated)
                 : updated;
             return next;
