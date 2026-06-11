@@ -109,19 +109,44 @@ export default function CompensationPanel({ rows, onUpdate, workTimeFactors = []
 
                                 {/* Work Time Factor */}
                                 <div className="w-44 shrink-0">
-                                    <SelectField
-                                        value={row.work_time_factor_id}
-                                        options={workTimeFactors.map(f => ({ value: String(f.id), label: f.factor_name }))}
-                                        onChange={v => updateField(ri, { work_time_factor_id: v })}
-                                        placeholder="Select factor…"
-                                    />
-                                    {factor ? (
-                                        <p className="text-[10px] text-blue-600 mt-0.5">
-                                            {factor.working_days_per_month}d/mo · {factor.working_hours_per_day}h/day
-                                        </p>
-                                    ) : (
-                                        <p className="text-[10px] text-amber-500 mt-0.5">⚠ Select to auto-compute</p>
-                                    )}
+                                    <div className="relative">
+                                        <SelectField
+                                            value={row.work_time_factor_id}
+                                            options={workTimeFactors.map(f => ({ value: String(f.id), label: f.factor_name }))}
+                                            onChange={v => {
+                                                const newFactor = workTimeFactors.find(f => String(f.id) === String(v)) ?? null;
+
+                                                // If a rate is already entered, recompute all rates with the new factor
+                                                const RATE_KEYS = ["monthly_rate", "daily_rate", "hourly_rate"];
+                                                const filledKey = RATE_KEYS.find(k => row[k] !== "" && row[k] !== undefined && row[k] !== null);
+
+                                                if (newFactor && filledKey) {
+                                                    const computed = computeRates(filledKey, row[filledKey], newFactor);
+                                                    updateField(ri, { work_time_factor_id: v, [filledKey]: row[filledKey], ...computed });
+                                                } else {
+                                                    updateField(ri, { work_time_factor_id: v });
+                                                }
+                                            }}
+                                            placeholder="Select factor…"
+                                        />
+                                        {factor ? (
+                                            <span className="pointer-events-none absolute -top-2 right-0
+                                                            inline-flex items-center gap-0.5 px-1.5 py-px
+                                                            rounded-full text-[9px] font-semibold leading-none
+                                                            bg-blue-50 text-blue-600 ring-1 ring-inset ring-blue-200
+                                                            whitespace-nowrap">
+                                                {factor.working_days_per_month}d/mo · {factor.working_hours_per_day}h/d
+                                            </span>
+                                        ) : (
+                                            <span className="pointer-events-none absolute -top-2 right-0
+                                                            inline-flex items-center gap-0.5 px-1.5 py-px
+                                                            rounded-full text-[9px] font-semibold leading-none
+                                                            bg-amber-50 text-amber-500 ring-1 ring-inset ring-amber-200
+                                                            whitespace-nowrap">
+                                                ⚠ pick factor
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {/* Rate fields */}
