@@ -4,36 +4,37 @@ import { ChevronDown } from "lucide-react";
 import { computeRates } from "@/utils/rateCompute";
 
 const RATE_COLS = [
-    { key: "monthly_rate",  label: "Monthly Rate"  },
-    { key: "daily_rate",    label: "Daily Rate"     },
-    { key: "hourly_rate",   label: "Hourly Rate"    },
+    { key: "monthly_rate",  label: "Monthly rate"  },
+    { key: "daily_rate",    label: "Daily rate"    },
+    { key: "hourly_rate",   label: "Hourly rate"   },
 ];
 
 const PAYROLL_TYPES = ["monthly", "semi_monthly", "weekly", "daily", "hourly"];
 const SALARY_TYPES  = ["monthly_rate", "semi_monthly_rate", "weekly_rate", "daily_rate", "hourly_rate"];
 
-function SelectField({ value, options, onChange, placeholder = "Select…" }) {
+function SelectField({ value, options, onChange, placeholder = "Select" }) {
     return (
         <div className="relative">
             <select
                 value={value ?? ""}
                 onChange={e => onChange(e.target.value)}
-                className="w-full h-8 pl-2.5 pr-7 text-xs border border-slate-200 rounded-md
-                           focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400
-                           appearance-none bg-white text-slate-700"
+                className="w-full h-9 pl-3 pr-8 text-[13px] border border-slate-200 rounded-md
+                           focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent
+                           appearance-none bg-white text-slate-700 capitalize transition-shadow"
             >
                 <option value="">{placeholder}</option>
                 {options.map(o => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
+                    <option key={o.value} value={o.value} className="capitalize">{o.label}</option>
                 ))}
             </select>
-            <ChevronDown size={11} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-400" />
+            <ChevronDown size={13} strokeWidth={2} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
         </div>
     );
 }
 
 /**
- * Full-width compensation panel with horizontal scroll.
+ * Responsive compensation panel — grid of cards on small screens,
+ * aligned table-style rows on larger screens.
  * Props:
  *   rows           — full rows array
  *   onUpdate       — (nextRows) => void
@@ -60,98 +61,68 @@ export default function CompensationPanel({ rows, onUpdate, workTimeFactors = []
     };
 
     return (
-        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-180px)] w-full">
-            <div style={{ minWidth: "900px" }}>
+        <div className="max-h-[calc(100vh-220px)] overflow-y-auto">
+            <div className="divide-y divide-slate-100">
+                {rows.map((row, ri) => {
+                    const factor = workTimeFactors.find(f => String(f.id) === String(row.work_time_factor_id)) ?? null;
 
-                {/* Header row */}
-                <div className="flex items-end gap-3 px-5 py-2 border-b-2 border-slate-200 bg-slate-50 sticky top-0 z-10">
-                    <div className="w-8 shrink-0" />
-                    <div className="w-44 shrink-0">
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Work Time Factor</p>
-                    </div>
-                    {RATE_COLS.map(({ key, label }) => (
-                        <div key={key} className="w-32 shrink-0">
-                            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 flex items-center gap-1">
-                                {label}
-                                <span className="text-[10px] text-slate-400 normal-case font-normal">(auto)</span>
-                            </p>
-                        </div>
-                    ))}
-                    <div className="w-36 shrink-0">
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Payroll Type</p>
-                    </div>
-                    <div className="w-36 shrink-0">
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Salary Type</p>
-                    </div>
-                    <div className="w-36 shrink-0">
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Effective Date</p>
-                    </div>
-                </div>
+                    return (
+                        <div key={ri} className={`px-4 sm:px-6 py-4 ${ri % 2 === 0 ? "bg-white" : "bg-slate-50/40"}`}>
 
-                {/* Data rows */}
-                <div className="divide-y divide-slate-100">
-                    {rows.map((row, ri) => {
-                        const factor = workTimeFactors.find(f => String(f.id) === String(row.work_time_factor_id)) ?? null;
-
-                        return (
-                            <div
-                                key={ri}
-                                className={`flex items-center gap-3 px-5 py-2.5 hover:bg-slate-50/60 transition-colors ${
-                                    ri % 2 === 0 ? "bg-white" : "bg-slate-50/40"
-                                }`}
-                            >
-                                {/* # */}
-                                <div className="w-8 shrink-0">
+                            {/* Row label + factor badge */}
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2.5">
                                     <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 text-[10px] font-semibold text-slate-500">
                                         {ri + 1}
                                     </span>
-                                </div>
-
-                                {/* Work Time Factor */}
-                                <div className="w-44 shrink-0">
-                                    <div className="relative">
-                                        <SelectField
-                                            value={row.work_time_factor_id}
-                                            options={workTimeFactors.map(f => ({ value: String(f.id), label: f.factor_name }))}
-                                            onChange={v => {
-                                                const newFactor = workTimeFactors.find(f => String(f.id) === String(v)) ?? null;
-
-                                                // If a rate is already entered, recompute all rates with the new factor
-                                                const RATE_KEYS = ["monthly_rate", "daily_rate", "hourly_rate"];
-                                                const filledKey = RATE_KEYS.find(k => row[k] !== "" && row[k] !== undefined && row[k] !== null);
-
-                                                if (newFactor && filledKey) {
-                                                    const computed = computeRates(filledKey, row[filledKey], newFactor);
-                                                    updateField(ri, { work_time_factor_id: v, [filledKey]: row[filledKey], ...computed });
-                                                } else {
-                                                    updateField(ri, { work_time_factor_id: v });
-                                                }
-                                            }}
-                                            placeholder="Select factor…"
-                                        />
-                                        {factor ? (
-                                            <span className="pointer-events-none absolute -top-2 right-0
-                                                            inline-flex items-center gap-0.5 px-1.5 py-px
-                                                            rounded-full text-[9px] font-semibold leading-none
-                                                            bg-blue-50 text-blue-600 ring-1 ring-inset ring-blue-200
-                                                            whitespace-nowrap">
-                                                {factor.working_days_per_month}d/mo · {factor.working_hours_per_day}h/d
-                                            </span>
-                                        ) : (
-                                            <span className="pointer-events-none absolute -top-2 right-0
-                                                            inline-flex items-center gap-0.5 px-1.5 py-px
-                                                            rounded-full text-[9px] font-semibold leading-none
-                                                            bg-amber-50 text-amber-500 ring-1 ring-inset ring-amber-200
-                                                            whitespace-nowrap">
-                                                ⚠ pick factor
-                                            </span>
+                                    <span className="text-[13px] font-medium text-slate-800 truncate">
+                                        {[row.first_name, row.last_name].filter(Boolean).join(" ") || (
+                                            <span className="text-slate-400">Unnamed employee</span>
                                         )}
-                                    </div>
+                                    </span>
+                                    <span className="text-xs text-slate-400 font-mono hidden sm:inline">{row.employee_number || "—"}</span>
                                 </div>
 
-                                {/* Rate fields */}
-                                {RATE_COLS.map(({ key }) => (
-                                    <div key={key} className="w-32 shrink-0">
+                                {factor ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium bg-indigo-50 text-indigo-600 whitespace-nowrap shrink-0">
+                                        {factor.working_days_per_month}d/mo · {factor.working_hours_per_day}h/d
+                                    </span>
+                                ) : (
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium bg-amber-50 text-amber-600 whitespace-nowrap shrink-0">
+                                        Select a work time factor
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Fields grid */}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                                <div className="col-span-2 sm:col-span-3 lg:col-span-1">
+                                    <label className="block text-[11px] font-medium text-slate-500 mb-1.5">Work time factor</label>
+                                    <SelectField
+                                        value={row.work_time_factor_id}
+                                        options={workTimeFactors.map(f => ({ value: String(f.id), label: f.factor_name }))}
+                                        onChange={v => {
+                                            const newFactor = workTimeFactors.find(f => String(f.id) === String(v)) ?? null;
+
+                                            const RATE_KEYS = ["monthly_rate", "daily_rate", "hourly_rate"];
+                                            const filledKey = RATE_KEYS.find(k => row[k] !== "" && row[k] !== undefined && row[k] !== null);
+
+                                            if (newFactor && filledKey) {
+                                                const computed = computeRates(filledKey, row[filledKey], newFactor);
+                                                updateField(ri, { work_time_factor_id: v, [filledKey]: row[filledKey], ...computed });
+                                            } else {
+                                                updateField(ri, { work_time_factor_id: v });
+                                            }
+                                        }}
+                                        placeholder="Select factor"
+                                    />
+                                </div>
+
+                                {RATE_COLS.map(({ key, label }) => (
+                                    <div key={key}>
+                                        <label className="block text-[11px] font-medium text-slate-500 mb-1.5">
+                                            {label} <span className="text-slate-400 font-normal">(auto)</span>
+                                        </label>
                                         <input
                                             type="number"
                                             min="0"
@@ -159,15 +130,15 @@ export default function CompensationPanel({ rows, onUpdate, workTimeFactors = []
                                             placeholder="0.00"
                                             value={row[key] ?? ""}
                                             onChange={e => handleRateChange(ri, key, e.target.value)}
-                                            className="w-full h-8 px-2.5 text-xs border border-slate-200 rounded-md
-                                                       focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400
-                                                       text-slate-700 font-mono"
+                                            className="w-full h-9 px-3 text-[13px] border border-slate-200 rounded-md
+                                                       focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent
+                                                       text-slate-700 font-mono tabular-nums transition-shadow"
                                         />
                                     </div>
                                 ))}
 
-                                {/* Payroll Type */}
-                                <div className="w-36 shrink-0">
+                                <div>
+                                    <label className="block text-[11px] font-medium text-slate-500 mb-1.5">Payroll type</label>
                                     <SelectField
                                         value={row.payroll_type}
                                         options={PAYROLL_TYPES.map(v => ({ value: v, label: v.replace(/_/g, " ") }))}
@@ -175,8 +146,8 @@ export default function CompensationPanel({ rows, onUpdate, workTimeFactors = []
                                     />
                                 </div>
 
-                                {/* Salary Type */}
-                                <div className="w-36 shrink-0">
+                                <div>
+                                    <label className="block text-[11px] font-medium text-slate-500 mb-1.5">Salary type</label>
                                     <SelectField
                                         value={row.salary_type}
                                         options={SALARY_TYPES.map(v => ({ value: v, label: v.replace(/_/g, " ") }))}
@@ -184,23 +155,21 @@ export default function CompensationPanel({ rows, onUpdate, workTimeFactors = []
                                     />
                                 </div>
 
-                                {/* Effective Date */}
-                                <div className="w-36 shrink-0">
+                                <div>
+                                    <label className="block text-[11px] font-medium text-slate-500 mb-1.5">Effective date</label>
                                     <input
                                         type="date"
                                         value={row.effective_date ?? ""}
                                         onChange={e => updateField(ri, { effective_date: e.target.value })}
-                                        className="w-full h-8 px-2.5 text-xs border border-slate-200 rounded-md
-                                                   focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400
-                                                   text-slate-700"
+                                        className="w-full h-9 px-3 text-[13px] border border-slate-200 rounded-md
+                                                   focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent
+                                                   text-slate-700 transition-shadow"
                                     />
                                 </div>
-
                             </div>
-                        );
-                    })}
-                </div>
-
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );

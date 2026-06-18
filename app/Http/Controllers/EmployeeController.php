@@ -11,8 +11,10 @@ use App\Models\CompanyBranch;
 use App\Models\Department;
 use App\Models\Position;
 use App\Models\WorkTimeFactor;
+use App\Models\EmploymentDetails;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\EmployeeStatusLog;
 
 class EmployeeController extends Controller
 {
@@ -25,8 +27,48 @@ class EmployeeController extends Controller
 
     public function index()
     {
+        $employees = $this->service->active()->sortBy('employee_number')->values();
+
+        $employees = $employees->map(function ($employee) {
+            $employee = $employee->toArray();
+
+            $ed = $employee['employment_details'] ?? null;
+
+            if ($ed) {
+                $employee['employment_details'] = array_merge($ed, [
+                    'department_name' => $ed['department']['department_name'] ?? null,
+                    'position_name'   => $ed['position']['position_name'] ?? null,
+                    'company_name'    => $ed['company']['company_name'] ?? null,
+                    'branch_name'     => $ed['branch']['branch_name'] ?? null,
+                ]);
+            }
+
+            return $employee;
+        });
+
+        $statusCounts = EmploymentDetails::select('status', DB::raw('count(*) as total'))
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $statuses = [
+            'active',
+            'inactive',
+            'on_leave',
+            'terminated',
+            'resigned',
+            'retired',
+            'contract_end',
+        ];
+
+        $stats = ['total' => Employee::count()];
+
+        foreach ($statuses as $status) {
+            $stats[$status] = $statusCounts[$status] ?? 0;
+        }
+
         return Inertia::render('Employees/Index', [
-            'employees' => $this->service->all()->sortBy('employee_number')->values(),
+            'employees' => $employees,
+            'stats' => $stats,
         ]);
     }
 
@@ -69,6 +111,22 @@ class EmployeeController extends Controller
                 'position_name'   => $ed->position?->position_name,
             ]);
         }
+
+        $data['statusLogs'] = EmployeeStatusLog::with('changedBy')
+            ->where('employee_id', $employee->id)
+            ->latest('applied_at')
+            ->get()
+            ->map(fn($log) => [
+                'id'                => $log->id,
+                'type'              => $log->type,
+                'previous_status'   => $log->previous_status,
+                'new_status'        => $log->new_status,
+                'effective_date'    => $log->effective_date?->toDateString(),
+                'last_working_date' => $log->last_working_date?->toDateString(),
+                'reason'            => $log->reason,
+                'changed_by'        => $log->changedBy?->name,
+                'applied_at'        => $log->applied_at?->toDateTimeString(),
+            ]);
 
         return Inertia::render('Employees/Show', $data);
     }
@@ -131,7 +189,6 @@ class EmployeeController extends Controller
         $request->validate([
             'employees'   => ['required', 'array', 'min:1', 'max:500'],
             'employees.*' => ['array'],
-            // required fields on each row
             'employees.*.employee_number' => ['required', 'string', 'max:50', 'distinct'],
             'employees.*.first_name'      => ['required', 'string', 'max:255'],
             'employees.*.last_name'       => ['required', 'string', 'max:255'],
@@ -140,20 +197,16 @@ class EmployeeController extends Controller
         $imported = 0;
         $errors   = [];
 
-        DB::transaction(function () use ($request, &$imported, &$errors) {
-            foreach ($request->input('employees') as $i => $row) {
-                try {
+        foreach ($request->input('employees') as $i => $row) {
+            try {
+                DB::transaction(function () use ($row) {
                     $this->service->create($row);
-                    $imported++;
-                } catch (\Exception $e) {
-                    $errors[] = "Row " . ($i + 2) . ": " . $e->getMessage();
-                }
+                });
+                $imported++;
+            } catch (\Exception $e) {
+                $errors[] = "Row " . ($i + 1) . ": " . $e->getMessage();
             }
-
-            if (!empty($errors)) {
-                throw new \Exception("Bulk import aborted due to errors.");
-            }
-        });
+        }
 
         if (!empty($errors)) {
             return back()->withErrors(['bulk' => $errors]);

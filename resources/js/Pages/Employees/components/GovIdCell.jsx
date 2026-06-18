@@ -206,7 +206,7 @@ export default function GovIdCell({ col, value, onChange, error }) {
         : (digits.length ? formatClean(digits, fmt, col) : "");
 
     return (
-        <div className="relative h-12 group">
+        <div className="relative h-11 group">
             <input
                 ref={inputRef}
                 type="text"
@@ -226,25 +226,24 @@ export default function GovIdCell({ col, value, onChange, error }) {
                     });
                 }}
                 onBlur={() => setFocused(false)}
-                className={`block w-full h-12 px-3 text-sm font-mono border-0 border-b-2 outline-none
-                            focus:ring-0 rounded-none tracking-wider bg-transparent select-none
+                className={`block w-full h-11 px-3 text-[13px] font-mono outline-none rounded-none tracking-wide bg-white select-none transition-shadow
                             ${error
-                                ? "border-red-400 focus:border-red-500 text-slate-800"
-                                : "border-transparent focus:border-blue-400 text-slate-800"
+                                ? "ring-2 ring-inset ring-rose-300 focus:ring-rose-400 text-slate-800"
+                                : "ring-0 focus:ring-2 focus:ring-inset focus:ring-indigo-400 text-slate-700"
                             }`}
             />
             {error && (
                 <span className="absolute right-2 top-1/2 -translate-y-1/2
-                                 w-1.5 h-1.5 rounded-full bg-red-500 pointer-events-none" />
+                                 w-1.5 h-1.5 rounded-full bg-rose-500 pointer-events-none" />
             )}
             {error && (
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-50
                                 hidden group-hover:flex items-center gap-1 px-2 py-1
-                                bg-red-600 text-white text-[10px] font-medium rounded shadow-lg
+                                bg-slate-900 text-white text-[11px] font-medium rounded-md shadow-lg
                                 whitespace-nowrap pointer-events-none">
                     {error}
                     <span className="absolute top-full left-1/2 -translate-x-1/2
-                                     border-4 border-transparent border-t-red-600" />
+                                     border-4 border-transparent border-t-slate-900" />
                 </div>
             )}
         </div>

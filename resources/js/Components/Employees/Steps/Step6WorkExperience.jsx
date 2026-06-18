@@ -1,3 +1,5 @@
+// resources/js/Components/Employees/Steps/Step6WorkExperience.jsx
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -12,14 +14,26 @@ function SectionHeading({ title, description }) {
     );
 }
 
-function Field({ label, error, children }) {
+function Field({ label, error, hint, children }) {
     return (
         <div>
             <Label>{label}</Label>
             {children}
+            {hint  && <p className="text-xs text-gray-400 mt-1">{hint}</p>}
             {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
         </div>
     );
+}
+
+// ── Auto-compute years of service from start/end dates ────────────────────────
+function calcYearsOfService(startDateStr, endDateStr) {
+    if (!startDateStr || !endDateStr) return "";
+    const start = new Date(startDateStr);
+    const end   = new Date(endDateStr);
+    if (isNaN(start) || isNaN(end) || end < start) return "";
+    const ms    = end - start;
+    const years = ms / (1000 * 60 * 60 * 24 * 365.25);
+    return Math.round(years * 100) / 100;
 }
 
 const emptyEntry = {
@@ -36,9 +50,18 @@ export default function Step6WorkExperience({ form, onBulkChange, errors = {} })
     const entries = form.work_experiences ?? [];
 
     const update = (index, field, value) => {
-        const updated = entries.map((entry, i) =>
-            i === index ? { ...entry, [field]: value } : entry
-        );
+        const updated = entries.map((entry, i) => {
+            if (i !== index) return entry;
+
+            const next = { ...entry, [field]: value };
+
+            // Auto-compute years_of_service when either date changes
+            if (field === "start_date" || field === "end_date") {
+                next.years_of_service = calcYearsOfService(next.start_date, next.end_date);
+            }
+
+            return next;
+        });
         onBulkChange({ work_experiences: updated });
     };
 
@@ -50,7 +73,6 @@ export default function Step6WorkExperience({ form, onBulkChange, errors = {} })
         onBulkChange({ work_experiences: entries.filter((_, i) => i !== index) });
     };
 
-    // Helper to get per-entry errors — errors key is like "work_experiences.0.company_name"
     const entryError = (index, field) =>
         errors[`work_experiences.${index}.${field}`] ||
         errors?.[`work_experiences`]?.[index]?.[field];
@@ -75,7 +97,7 @@ export default function Step6WorkExperience({ form, onBulkChange, errors = {} })
                         key={index}
                         className="border border-[#BFDBFE] rounded-lg p-5 space-y-4 bg-[#F8FAFF]"
                     >
-                        {/* Header row */}
+                        {/* Header */}
                         <div className="flex items-center justify-between">
                             <span className="text-sm font-semibold text-[#1E40AF]">
                                 Entry #{index + 1}
@@ -118,7 +140,7 @@ export default function Step6WorkExperience({ form, onBulkChange, errors = {} })
                             </Field>
                         </div>
 
-                        {/* Dates / Years of Service */}
+                        {/* Dates + auto-computed years */}
                         <div className="grid grid-cols-3 gap-4">
                             <Field label="Start Date" error={entryError(index, "start_date")}>
                                 <Input
@@ -136,15 +158,18 @@ export default function Step6WorkExperience({ form, onBulkChange, errors = {} })
                                     className="!bg-white"
                                 />
                             </Field>
-                            <Field label="Years of Service" error={entryError(index, "years_of_service")}>
+                            <Field
+                                label="Years of Service"
+                                hint="Auto-computed from start and end date."
+                                error={entryError(index, "years_of_service")}
+                            >
                                 <Input
                                     type="number"
-                                    min="0"
-                                    step="0.01"
-                                    placeholder="e.g. 2.5"
+                                    readOnly
+                                    tabIndex={-1}
                                     value={entry.years_of_service ?? ""}
-                                    onChange={(e) => update(index, "years_of_service", e.target.value)}
-                                    className="!bg-white"
+                                    placeholder="—"
+                                    className="bg-gray-50 cursor-not-allowed text-gray-500"
                                 />
                             </Field>
                         </div>

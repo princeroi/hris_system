@@ -3,12 +3,54 @@
 namespace App\Services;
 
 use App\Models\Employee;
+use App\Models\EmployeeStatusLog;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use App\Models\Rehire;
 
 class EmployeeService
 {
     public function all()
     {
-        return Employee::latest()->get();
+        return Employee::with(['employmentDetails', 'personalInfo'])->latest()->get();
+    }
+
+    public function active()
+    {
+        return Employee::with([
+                'employmentDetails.department',
+                'employmentDetails.position',
+                'employmentDetails.company',
+                'employmentDetails.branch',
+                'personalInfo',
+            ])
+            ->whereHas('employmentDetails', function ($q) {
+                $q->where('status', 'active');
+            })
+            ->latest()
+            ->get();
+    }
+
+    public function archive()
+    {
+        return Employee::with([
+                'employmentDetails.department',
+                'employmentDetails.position',
+                'employmentDetails.company',
+                'employmentDetails.branch',
+                'personalInfo',
+            ])
+            ->whereHas('employmentDetails', function ($q) {
+                $q->whereIn('status', [
+                    'inactive',
+                    'terminated',
+                    'resigned',
+                    'retired',
+                    'contract_end',
+                ]);
+            })
+            ->latest()
+            ->get();
     }
 
     public function find(int $id): array
@@ -46,13 +88,13 @@ class EmployeeService
             'last_name'       => $data['last_name'],
             'middle_name'     => $data['middle_name'] ?? null,
             'suffix'          => $data['suffix'] ?? null,
-            'status'          => $data['status'] ?? 'active',
+            // 'status'          => $data['status'] ?? 'active',
         ]);
 
         $employee->personalInfo()->create($this->personalInfoData($data));
         $employee->employmentDetails()->create($this->employmentDetailsData($data));
         $employee->govIds()->create($this->govIdsData($data));
-        $employee->bankAccount()->create($this->bankAccountData($data)); 
+        $employee->bankAccount()->create($this->bankAccountData($data));
         $employee->compensation()->create($this->compensationData($data));
 
         if (!empty($data['work_experiences'])) {
@@ -96,7 +138,7 @@ class EmployeeService
             $this->govIdsData($data)
         );
 
-        $employee->bankAccount()->updateOrCreate( 
+        $employee->bankAccount()->updateOrCreate(
             ['employee_id' => $employee->id],
             $this->bankAccountData($data)
         );
@@ -106,17 +148,17 @@ class EmployeeService
             $this->compensationData($data)
         );
 
-        $employee->workExperience()->delete();
+        if (array_key_exists('work_experiences', $data)) {
+            $employee->workExperience()->delete();
 
-        if (!empty($data['work_experiences'])) {
             foreach ($data['work_experiences'] as $entry) {
                 $employee->workExperience()->create($this->workExperienceData($entry));
             }
         }
 
-        $employee->emergencyContacts()->delete();
+        if (array_key_exists('emergency_contacts', $data)) {
+            $employee->emergencyContacts()->delete();
 
-        if (!empty($data['emergency_contacts'])) {
             foreach ($data['emergency_contacts'] as $entry) {
                 $employee->emergencyContacts()->create($this->emergencyContactData($entry));
             }
@@ -190,9 +232,9 @@ class EmployeeService
         ];
     }
 
-    public function bankAccountData(array $data) : array
+    private function bankAccountData(array $data): array
     {
-        return[
+        return [
             'bank_name'            => $data['bank_name']            ?? null,
             'account_number'       => $data['account_number']       ?? null,
             'account_name'         => $data['account_name']         ?? null,
@@ -205,7 +247,6 @@ class EmployeeService
             'other_account_number' => $data['other_account_number'] ?? null,
             'other_account_name'   => $data['other_account_name']   ?? null,
         ];
-        
     }
 
     private function compensationData(array $data): array
@@ -213,25 +254,25 @@ class EmployeeService
         return [
             'work_time_factor_id' => $data['work_time_factor_id'] ?? null,
             'monthly_rate'   => $data['monthly_rate']   ?? null,
-            'daily_rate'     => $data['daily_rate']      ?? null,
-            'hourly_rate'    => $data['hourly_rate']     ?? null,
-            'payroll_type'   => $data['payroll_type']    ?? null,
-            'salary_type'    => $data['salary_type']     ?? null,
-            'effective_date' => $data['effective_date']  ?? null,
-            'is_current'     => $data['is_current']      ?? true,
+            'daily_rate'     => $data['daily_rate']     ?? null,
+            'hourly_rate'    => $data['hourly_rate']    ?? null,
+            'payroll_type'   => $data['payroll_type']   ?? null,
+            'salary_type'    => $data['salary_type']    ?? null,
+            'effective_date' => $data['effective_date'] ?? null,
+            'is_current'     => $data['is_current']     ?? true,
         ];
     }
 
     private function workExperienceData(array $entry): array
     {
         return [
-            'company_name'      => $entry['company_name']     ?? null,
-            'position'          => $entry['position']         ?? null,
-            'department'        => $entry['department']       ?? null,
-            'start_date'        => $entry['start_date']       ?? null,
-            'end_date'          => $entry['end_date']         ?? null,
-            'years_of_service'  => $entry['years_of_service'] ?? null,
-            'remarks'           => $entry['remarks']          ?? null,
+            'company_name'     => $entry['company_name']     ?? null,
+            'position'         => $entry['position']         ?? null,
+            'department'       => $entry['department']       ?? null,
+            'start_date'       => $entry['start_date']       ?? null,
+            'end_date'         => $entry['end_date']         ?? null,
+            'years_of_service' => $entry['years_of_service'] ?? null,
+            'remarks'          => $entry['remarks']          ?? null,
         ];
     }
 
@@ -244,5 +285,60 @@ class EmployeeService
             'contact_person_telephone'    => $entry['contact_person_telephone']    ?? null,
             'contact_person_address'      => $entry['contact_person_address']      ?? null,
         ];
+    }
+
+    public function changeStatus(Employee $employee, array $data): EmployeeStatusLog
+    {
+        if ($employee->employmentDetails?->status !== 'active') {
+            throw new \RuntimeException('Only active employees can have their status changed.');
+        }
+
+        return DB::transaction(function () use ($employee, $data) {
+            $previousStatus = $employee->employmentDetails?->status;
+
+            $employee->employmentDetails()->updateOrCreate(
+                ['employee_id' => $employee->id],
+                ['status' => $data['new_status']]
+            );
+
+            return EmployeeStatusLog::create([
+                'employee_id'       => $employee->id,
+                'type'              => 'archive',
+                'previous_status'   => $previousStatus,
+                'new_status'        => $data['new_status'],
+                'effective_date'    => $data['effective_date'],
+                'last_working_date' => $data['last_working_date'] ?? null,
+                'reason'            => $data['reason'] ?? null,
+                'changed_by'        => Auth::id(),
+                'applied_at'        => now(),
+            ]);
+        });
+    }
+
+    public function rehire(Employee $employee, array $data): EmployeeStatusLog
+    {
+        if ($employee->employmentDetails?->status === 'active') {
+            throw new \RuntimeException('Employee is already active.');
+        }
+
+        return DB::transaction(function () use ($employee, $data) {
+            $previousStatus = $employee->employmentDetails?->status;
+
+            $employee->employmentDetails()->updateOrCreate(
+                ['employee_id' => $employee->id],
+                ['status' => 'active']
+            );
+
+            return EmployeeStatusLog::create([
+                'employee_id'     => $employee->id,
+                'type'            => 'rehire',
+                'previous_status' => $previousStatus,
+                'new_status'      => 'active',
+                'effective_date'  => $data['rehire_date'],
+                'reason'          => $data['reason'] ?? null,
+                'changed_by'      => Auth::id(),
+                'applied_at'      => now(),
+            ]);
+        });
     }
 }

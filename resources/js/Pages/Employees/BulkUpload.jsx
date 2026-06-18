@@ -7,7 +7,7 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head } from "@inertiajs/react";
 import { Button } from "@/components/ui/button";
 import { downloadEmployeeTemplate } from "@/utils/generateEmployeeTemplate";
-import { ChevronDown, X, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+import { ChevronDown, X, CheckCircle2, XCircle, AlertTriangle, Upload, Download, Plus, RotateCcw, ArrowLeft } from "lucide-react";
 
 import { TABS, REQUIRED, DATE_KEYS, NUM_KEYS, CELL_OPTIONS, FK_COLS } from "./bulkUploadConfig";
 import { parseRow, validateRow, flatErrors, emptyRow, colLabel, applyRowDefaults } from "./bulkUploadUtils";
@@ -18,7 +18,19 @@ import WorkExperiencePanel    from "./components/WorkExperiencePanel";
 import EmergencyContactsPanel from "./components/EmergencyContactsPanel";
 import CompensationPanel      from "./components/CompensationPanel";
 
-const GOV_ID_COLS = ["sss_number", "pagibig_number", "philhealth_number", "tin_number"];
+const GOV_ID_COLS         = ["sss_number", "pagibig_number", "philhealth_number", "tin_number"];
+const CONTRACT_DATE_COLS  = ["contract_date_from", "contract_date_to"];
+const PROBATION_ONLY_COLS = ["regularization_date", "probationary_evaluation_date", "probationary_period_months"];
+const PROBATION_TYPES     = ["probationary", "regular"];
+
+// ── Small helper cell ───────────────────────────────────────────────────────
+function NotApplicableCell() {
+    return (
+        <div className="h-11 px-3 flex items-center text-xs text-slate-300 select-none">
+            Not applicable
+        </div>
+    );
+}
 
 // ── Import Summary Panel ──────────────────────────────────────────────────────
 function ImportSummary({ results, onReset, onViewEmployees }) {
@@ -27,15 +39,15 @@ function ImportSummary({ results, onReset, onViewEmployees }) {
 
     return (
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <h3 className="text-sm font-semibold text-slate-800">Import Results</h3>
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200">
-                        ✓ {succeeded.length} imported
+            <div className="px-4 sm:px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
+                    <h3 className="text-sm font-semibold text-slate-900">Import results</h3>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700">
+                        <CheckCircle2 size={12} strokeWidth={2.5} /> {succeeded.length} imported
                     </span>
                     {skipped.length > 0 && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-600 ring-1 ring-inset ring-red-200">
-                            ✗ {skipped.length} skipped
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-600">
+                            <XCircle size={12} strokeWidth={2.5} /> {skipped.length} skipped
                         </span>
                     )}
                 </div>
@@ -43,7 +55,7 @@ function ImportSummary({ results, onReset, onViewEmployees }) {
                     <Button
                         size="sm"
                         onClick={onViewEmployees}
-                        className="h-7 text-xs bg-blue-700 hover:bg-blue-800 text-white"
+                        className="h-8 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
                     >
                         View employees
                     </Button>
@@ -51,25 +63,25 @@ function ImportSummary({ results, onReset, onViewEmployees }) {
                         size="sm"
                         variant="outline"
                         onClick={onReset}
-                        className="h-7 text-xs border-slate-200 text-slate-600 hover:bg-slate-50"
+                        className="h-8 text-xs border-slate-200 text-slate-600 hover:bg-slate-50"
                     >
                         Upload another
                     </Button>
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 divide-x divide-slate-100">
-                <div className="p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
+                <div className="p-4 sm:p-5">
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 mb-3 flex items-center gap-1.5">
-                        <CheckCircle2 size={12} /> Imported ({succeeded.length})
+                        <CheckCircle2 size={12} strokeWidth={2.5} /> Imported ({succeeded.length})
                     </p>
                     {succeeded.length === 0 ? (
-                        <p className="text-xs text-slate-400 italic">None imported.</p>
+                        <p className="text-xs text-slate-400">None imported.</p>
                     ) : (
                         <ul className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
                             {succeeded.map((r, i) => (
-                                <li key={i} className="flex items-center gap-2 text-xs text-slate-700 bg-emerald-50/60 rounded-md px-2.5 py-1.5">
-                                    <CheckCircle2 size={11} className="text-emerald-500 shrink-0" />
+                                <li key={i} className="flex items-center gap-2.5 text-xs text-slate-700 bg-emerald-50/60 rounded-md px-3 py-2">
+                                    <CheckCircle2 size={12} strokeWidth={2.5} className="text-emerald-500 shrink-0" />
                                     <span className="font-mono font-medium text-emerald-800">{r.employee_number}</span>
                                     <span className="text-slate-500 truncate">{r.name}</span>
                                 </li>
@@ -78,29 +90,29 @@ function ImportSummary({ results, onReset, onViewEmployees }) {
                     )}
                 </div>
 
-                <div className="p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-red-600 mb-3 flex items-center gap-1.5">
-                        <XCircle size={12} /> Skipped ({skipped.length})
+                <div className="p-4 sm:p-5">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-600 mb-3 flex items-center gap-1.5">
+                        <XCircle size={12} strokeWidth={2.5} /> Skipped ({skipped.length})
                     </p>
                     {skipped.length === 0 ? (
-                        <p className="text-xs text-slate-400 italic">No rows were skipped.</p>
+                        <p className="text-xs text-slate-400">No rows were skipped.</p>
                     ) : (
                         <ul className="space-y-2 max-h-72 overflow-y-auto pr-1">
                             {skipped.map((r, i) => (
-                                <li key={i} className="bg-red-50/60 rounded-md px-2.5 py-2">
+                                <li key={i} className="bg-rose-50/60 rounded-md px-3 py-2.5">
                                     <div className="flex items-center gap-2 mb-1">
-                                        <XCircle size={11} className="text-red-400 shrink-0" />
-                                        <span className="font-mono text-xs font-medium text-red-700">
+                                        <XCircle size={12} strokeWidth={2.5} className="text-rose-400 shrink-0" />
+                                        <span className="font-mono text-xs font-medium text-rose-700">
                                             {r.employee_number || (
-                                                <span className="italic text-slate-400">No ID</span>
+                                                <span className="text-slate-400">No ID</span>
                                             )}
                                         </span>
                                         <span className="text-xs text-slate-500 truncate">{r.name}</span>
                                     </div>
-                                    <ul className="pl-4 space-y-0.5">
+                                    <ul className="pl-5 space-y-0.5">
                                         {r.reasons.map((reason, ri) => (
-                                            <li key={ri} className="text-[11px] text-red-600 flex items-start gap-1">
-                                                <span className="mt-px shrink-0">•</span>
+                                            <li key={ri} className="text-[11px] text-rose-600 flex items-start gap-1.5">
+                                                <span className="mt-px shrink-0">·</span>
                                                 <span>{reason}</span>
                                             </li>
                                         ))}
@@ -192,6 +204,9 @@ export default function BulkUpload({
         "philhealth_number", "philhealth_status",
         "tin_number",        "tin_status",
         "atm_status",        "atm_card_number",
+        "hired_date",
+        "employment_type",
+        "probationary_period_months",
     ]);
 
     const updateCell = useCallback((rowIdx, col, value) => {
@@ -305,11 +320,11 @@ export default function BulkUpload({
 
     // ── Column min-width helper ───────────────────────────────────────────────
     const colMinWidth = (col) => {
-        if (FK_COLS.includes(col) || CELL_OPTIONS[col])  return 160;
-        if (GOV_ID_COLS.includes(col))                   return 180;
-        if (DATE_KEYS.includes(col))                     return 148;
+        if (FK_COLS.includes(col) || CELL_OPTIONS[col])  return 168;
+        if (GOV_ID_COLS.includes(col))                   return 188;
+        if (DATE_KEYS.includes(col))                     return 152;
         if (NUM_KEYS.includes(col))                      return 120;
-        return 140;
+        return 148;
     };
 
     // ── Render ────────────────────────────────────────────────────────────────
@@ -321,44 +336,38 @@ export default function BulkUpload({
                         variant="ghost"
                         size="sm"
                         onClick={() => router.visit("/employees")}
-                        className="text-blue-700 hover:text-blue-900 hover:bg-blue-50 gap-1"
+                        className="text-slate-600 hover:text-slate-900 hover:bg-slate-100 gap-1.5 px-2"
                     >
-                        <span className="text-base leading-none">←</span> Back
+                        <ArrowLeft size={15} strokeWidth={2} /> Back
                     </Button>
-                    <div className="w-px h-5 bg-blue-200" />
-                    <h2 className="text-xl font-semibold text-gray-800">Bulk Upload Employees</h2>
+                    <div className="w-px h-5 bg-slate-200" />
+                    <h2 className="text-lg font-semibold text-slate-900 tracking-tight">Bulk upload employees</h2>
                 </div>
             }
         >
             <Head title="Bulk Upload Employees" />
 
-            {/* Outer wrapper: flush to layout edges, minimal vertical padding */}
-            <div className="py-2">
-                <div className="w-full px-2 space-y-2">
+            <div className="py-4 sm:py-6">
+                <div className="w-full max-w-[1600px] mx-auto px-3 sm:px-6 space-y-3">
 
                     {/* ── Upload bar ──────────────────────────────────────── */}
-                    <div className="flex items-center gap-3 bg-white rounded-lg border border-slate-200 px-3 py-2">
-                        <label className="flex items-center gap-2 flex-1 cursor-pointer group">
-                            <span className="shrink-0 text-slate-400 group-hover:text-blue-500 transition-colors">
-                                <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path
-                                        d="M7.5 1.5v8M4.5 4.5l3-3 3 3M2.5 10.5v2a.5.5 0 00.5.5h9a.5.5 0 00.5-.5v-2"
-                                        stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"
-                                    />
-                                </svg>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-white rounded-xl border border-slate-200 px-4 py-3 shadow-sm">
+                        <label className="flex items-center gap-3 flex-1 cursor-pointer group min-w-0">
+                            <span className="shrink-0 w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500 group-hover:bg-indigo-100 transition-colors">
+                                <Upload size={16} strokeWidth={2} />
                             </span>
 
                             {fileName ? (
-                                <span className="text-xs font-medium text-blue-700 truncate">
-                                    ✓ {fileName}{" "}
-                                    <span className="text-slate-400 font-normal">
-                                        · {rows.length} row{rows.length !== 1 ? "s" : ""}
+                                <span className="text-sm font-medium text-slate-800 truncate">
+                                    {fileName}
+                                    <span className="text-slate-400 font-normal ml-2">
+                                        {rows.length} row{rows.length !== 1 ? "s" : ""} loaded
                                     </span>
                                 </span>
                             ) : (
-                                <span className="text-xs text-slate-500 group-hover:text-slate-700 transition-colors">
-                                    Upload .xlsx file{" "}
-                                    <span className="text-slate-400">or type directly in the table below</span>
+                                <span className="text-sm text-slate-500 group-hover:text-slate-700 transition-colors truncate">
+                                    Upload an .xlsx file
+                                    <span className="text-slate-400"> — or enter data directly in the table below</span>
                                 </span>
                             )}
 
@@ -379,28 +388,26 @@ export default function BulkUpload({
                             />
                         </label>
 
-                        <div className="w-px h-4 bg-slate-200 shrink-0" />
-
                         <Button
-                            variant="ghost"
+                            variant="info-outline"
                             size="sm"
                             onClick={downloadEmployeeTemplate}
-                            className="h-7 text-xs text-slate-500 hover:text-blue-700 hover:bg-blue-50 shrink-0 px-2 gap-1"
+                            className="h-9 text-xs text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-indigo-700 shrink-0 px-3 gap-1.5 w-full sm:w-auto"
                         >
-                            ↓ Template
+                            <Download size={13} strokeWidth={2} /> Download template
                         </Button>
                     </div>
 
                     {/* ── Server errors ────────────────────────────────────── */}
                     {serverErrors.length > 0 && (
-                        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                            <p className="text-sm font-semibold text-red-700 mb-2">
+                        <div className="bg-rose-50 border border-rose-200 rounded-xl p-4">
+                            <p className="text-sm font-semibold text-rose-700 mb-2">
                                 {serverErrors.length} server error{serverErrors.length > 1 ? "s" : ""}
                             </p>
                             <ul className="space-y-1 max-h-28 overflow-y-auto">
                                 {serverErrors.map((err, i) => (
-                                    <li key={i} className="text-xs text-red-600 flex items-start gap-1.5">
-                                        <span className="mt-px shrink-0">•</span> {err}
+                                    <li key={i} className="text-xs text-rose-600 flex items-start gap-1.5">
+                                        <span className="mt-px shrink-0">·</span> {err}
                                     </li>
                                 ))}
                             </ul>
@@ -418,91 +425,93 @@ export default function BulkUpload({
 
                     {/* ── Main table card ──────────────────────────────────── */}
                     {!importResults && (
-                        <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
+                        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
 
                             {/* Toolbar */}
-                            <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 bg-white">
-                                <div className="flex items-center gap-3">
-                                    <p className="text-sm font-semibold text-slate-800">Employees</p>
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-5 py-3 border-b border-slate-100">
+                                <div className="flex items-center gap-2.5 flex-wrap">
+                                    <p className="text-sm font-semibold text-slate-900">Employees</p>
                                     <Pill count={rows.length} color="slate" />
                                     {totalErrors > 0 && (
-                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-600 ring-1 ring-inset ring-red-200">
-                                            ⚠ {totalErrors} with errors
+                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-600">
+                                            <AlertTriangle size={11} strokeWidth={2.5} /> {totalErrors} with errors
                                         </span>
                                     )}
                                     {cleanCount > 0 && (
-                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200">
-                                            ✓ {cleanCount} ready
+                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700">
+                                            <CheckCircle2 size={11} strokeWidth={2.5} /> {cleanCount} ready
                                         </span>
                                     )}
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Button
                                         size="sm"
-                                        variant="outline"
+                                        variant="success"
                                         onClick={addRow}
-                                        className="h-7 text-xs gap-1 text-slate-600 border-slate-200 hover:bg-slate-50"
+                                        className="h-8 text-xs gap-1.5 text-slate-100 border-slate-200 hover:bg-slate-50"
                                     >
-                                        + Add row
+                                        <Plus size={13} strokeWidth={2} /> Add row
                                     </Button>
                                     <Button
                                         size="sm"
-                                        variant="outline"
+                                        variant="warning-outline"
                                         onClick={reset}
-                                        className="h-7 text-xs text-red-500 border-red-100 hover:bg-red-50 hover:border-red-200"
+                                        className="h-8 text-xs gap-1.5 text-rose-500 border-slate-200 hover:bg-rose-50 hover:border-rose-200"
                                     >
-                                        Reset
+                                        <RotateCcw size={13} strokeWidth={2} /> Reset
                                     </Button>
                                 </div>
                             </div>
 
                             {/* ── Tabs ─────────────────────────────────────── */}
-                            <div className="flex items-end border-b border-slate-200 bg-slate-50/70">
-                                {TABS.map((tab, i) => {
-                                    const isActive = i === activeTab;
-                                    const errCount = tabErrorCounts[i];
-                                    const hasErr   = errCount > 0;
+                            <div className="border-b border-slate-200 bg-slate-50/60 overflow-x-auto">
+                                <div className="flex min-w-max sm:min-w-0">
+                                    {TABS.map((tab, i) => {
+                                        const isActive = i === activeTab;
+                                        const errCount = tabErrorCounts[i];
+                                        const hasErr   = errCount > 0;
 
-                                    return (
-                                        <button
-                                            key={i}
-                                            onClick={() => setActiveTab(i)}
-                                            className={[
-                                                "flex flex-1 items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 border-x border-x-blue-100 whitespace-nowrap transition-colors -mb-px rounded-t",
-                                                isActive
-                                                    ? hasErr
-                                                        ? "border-red-500 text-red-600 bg-white shadow-sm"
-                                                        : "border-blue-600 text-blue-700 bg-white shadow-sm"
-                                                    : hasErr
-                                                        ? "border-transparent text-red-500 hover:text-red-600 hover:bg-red-50/60"
-                                                        : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-white/60",
-                                            ].join(" ")}
-                                        >
-                                            <span>{tab.icon}</span>
-                                            {tab.label}
-                                            {hasErr && (
-                                                <span className={[
-                                                    "inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-[9px] font-bold leading-none",
-                                                    isActive ? "bg-red-100 text-red-600" : "bg-red-500 text-white",
-                                                ].join(" ")}>
-                                                    {errCount}
-                                                </span>
-                                            )}
-                                            {tab.special === "work_experience" && (
-                                                <Pill
-                                                    count={rows.reduce((s, r) => s + (r.work_experiences?.length ?? 0), 0)}
-                                                    color={hasErr ? "red" : "blue"}
-                                                />
-                                            )}
-                                            {tab.special === "emergency_contacts" && (
-                                                <Pill
-                                                    count={rows.reduce((s, r) => s + (r.emergency_contacts?.length ?? 0), 0)}
-                                                    color={hasErr ? "red" : "blue"}
-                                                />
-                                            )}
-                                        </button>
-                                    );
-                                })}
+                                        return (
+                                            <button
+                                                key={i}
+                                                onClick={() => setActiveTab(i)}
+                                                className={[
+                                                    "flex items-center justify-center gap-1.5 px-3.5 py-2.5 text-xs font-medium border-b-2 whitespace-nowrap transition-colors -mb-px sm:flex-1",
+                                                    isActive
+                                                        ? hasErr
+                                                            ? "border-rose-500 text-rose-600 bg-white"
+                                                            : "border-indigo-600 text-indigo-700 bg-white"
+                                                        : hasErr
+                                                            ? "border-transparent text-rose-500 hover:text-rose-600 hover:bg-rose-50/60"
+                                                            : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-white/60",
+                                                ].join(" ")}
+                                            >
+                                                <span className="text-sm leading-none">{tab.icon}</span>
+                                                {tab.label}
+                                                {hasErr && (
+                                                    <span className={[
+                                                        "inline-flex items-center justify-center min-w-[17px] h-[17px] px-1 rounded-full text-[10px] font-bold leading-none",
+                                                        isActive ? "bg-rose-100 text-rose-600" : "bg-rose-500 text-white",
+                                                    ].join(" ")}>
+                                                        {errCount}
+                                                    </span>
+                                                )}
+                                                {tab.special === "work_experience" && (
+                                                    <Pill
+                                                        count={rows.reduce((s, r) => s + (r.work_experiences?.length ?? 0), 0)}
+                                                        color={hasErr ? "red" : "blue"}
+                                                    />
+                                                )}
+                                                {tab.special === "emergency_contacts" && (
+                                                    <Pill
+                                                        count={rows.reduce((s, r) => s + (r.emergency_contacts?.length ?? 0), 0)}
+                                                        color={hasErr ? "red" : "blue"}
+                                                    />
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
 
                             {/* Special panels */}
@@ -518,14 +527,14 @@ export default function BulkUpload({
 
                             {/* ── Regular table ─────────────────────────────── */}
                             {!isSpecial && (
-                                <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-180px)] w-full">
+                                <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-260px)] w-full">
                                     <table
                                         className="border-collapse"
                                         style={{ tableLayout: "auto", width: "max-content", minWidth: "100%" }}
                                     >
                                         <thead className="sticky top-0 z-10">
-                                            <tr className="border-b-2 border-slate-200 bg-slate-50">
-                                                <th className="px-3 py-2 text-center text-slate-400 font-semibold text-[11px] w-10 shrink-0">
+                                            <tr className="border-b border-slate-200 bg-slate-50">
+                                                <th className="px-3 py-2.5 text-center text-slate-400 font-semibold text-[11px] w-10 shrink-0">
                                                     #
                                                 </th>
                                                 {currentCols.map(col => {
@@ -535,19 +544,19 @@ export default function BulkUpload({
                                                         <th
                                                             key={col}
                                                             style={{ minWidth: colMinWidth(col) }}
-                                                            className={`px-2.5 py-2 text-left font-semibold text-[11px] uppercase tracking-wide whitespace-nowrap border-r border-slate-200 last:border-r-0 ${
-                                                                isReq ? "text-blue-700" : "text-slate-500"
+                                                            className={`px-3 py-2.5 text-left font-semibold text-[11px] uppercase tracking-wide whitespace-nowrap border-r border-slate-100 last:border-r-0 ${
+                                                                isReq ? "text-indigo-700" : "text-slate-500"
                                                             }`}
                                                         >
-                                                            <span className="flex items-center gap-1">
+                                                            <span className="flex items-center gap-1.5">
                                                                 {colLabel(col)}
-                                                                {isReq      && <span className="text-red-400 font-bold">*</span>}
-                                                                {isDropdown && <ChevronDown size={10} className="text-slate-300" />}
+                                                                {isReq      && <span className="text-rose-400 font-bold">*</span>}
+                                                                {isDropdown && <ChevronDown size={11} strokeWidth={2} className="text-slate-300" />}
                                                             </span>
                                                         </th>
                                                     );
                                                 })}
-                                                <th className="px-2.5 py-2 w-10 shrink-0" />
+                                                <th className="px-2.5 py-2.5 w-10 shrink-0" />
                                             </tr>
                                         </thead>
 
@@ -563,22 +572,25 @@ export default function BulkUpload({
                                                 const isDBConflict = (fieldErrors["employee_number"] ?? [])
                                                     .some(e => e.includes("already exists in the system"));
 
+                                                const empType = String(row.employment_type ?? "");
+                                                const isProb  = PROBATION_TYPES.includes(empType);
+
                                                 return (
                                                     <tr
                                                         key={ri}
                                                         className={`border-b border-slate-100 last:border-b-0 transition-colors ${
-                                                            isDup        ? "bg-orange-50/40" :
-                                                            isConflict   ? "bg-yellow-50/40" :
-                                                            hasErr       ? "bg-red-50/40"    :
-                                                            ri % 2 === 0 ? "bg-white hover:bg-blue-50/20"
-                                                                         : "bg-slate-50/50 hover:bg-blue-50/20"
+                                                            isDup        ? "bg-orange-50/50" :
+                                                            isConflict   ? "bg-amber-50/50" :
+                                                            hasErr       ? "bg-rose-50/40"    :
+                                                            ri % 2 === 0 ? "bg-white hover:bg-slate-50/70"
+                                                                         : "bg-slate-50/40 hover:bg-slate-50/70"
                                                         }`}
                                                     >
-                                                        <td className="text-center px-2 py-0 h-10 align-middle w-10">
-                                                            <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-semibold ${
+                                                        <td className="text-center px-2 py-0 h-11 align-middle w-10">
+                                                            <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-semibold tabular-nums ${
                                                                 isDup        ? "bg-orange-100 text-orange-600" :
-                                                                isConflict   ? "bg-yellow-100 text-yellow-700" :
-                                                                hasErr       ? "bg-red-100 text-red-600"       :
+                                                                isConflict   ? "bg-amber-100 text-amber-700" :
+                                                                hasErr       ? "bg-rose-100 text-rose-600"       :
                                                                                "bg-slate-100 text-slate-500"
                                                             }`}>
                                                                 {ri + 1}
@@ -587,13 +599,31 @@ export default function BulkUpload({
 
                                                         {currentCols.map(col => {
                                                             const cellError = (fieldErrors[col] ?? [])[0];
+
+                                                            const tdClass = `p-0 align-middle border-r border-slate-100 last:border-r-0 ${
+                                                                cellError ? "ring-1 ring-inset ring-rose-300" : ""
+                                                            }`;
+
+                                                            // Contract date range doesn't apply to probationary/regular
+                                                            if (CONTRACT_DATE_COLS.includes(col) && isProb) {
+                                                                return (
+                                                                    <td key={col} className={tdClass}>
+                                                                        <NotApplicableCell />
+                                                                    </td>
+                                                                );
+                                                            }
+
+                                                            // Probationary-only fields don't apply to other employment types
+                                                            if (PROBATION_ONLY_COLS.includes(col) && !isProb) {
+                                                                return (
+                                                                    <td key={col} className={tdClass}>
+                                                                        <NotApplicableCell />
+                                                                    </td>
+                                                                );
+                                                            }
+
                                                             return (
-                                                                <td
-                                                                    key={col}
-                                                                    className={`p-0 align-middle border-r border-slate-100 last:border-r-0 ${
-                                                                        cellError ? "ring-1 ring-inset ring-red-300 bg-red-50/30" : ""
-                                                                    }`}
-                                                                >
+                                                                <td key={col} className={tdClass}>
                                                                     {col === "employee_number" && isDBConflict ? (
                                                                         <div className="relative">
                                                                             <SmartCell
@@ -603,8 +633,8 @@ export default function BulkUpload({
                                                                                 fkOptions={fkOptions}
                                                                                 error={cellError}
                                                                             />
-                                                                            <span className="absolute top-1 right-1 inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-600 pointer-events-none">
-                                                                                <AlertTriangle size={8} /> EXISTS
+                                                                            <span className="absolute top-1 right-1 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-600 pointer-events-none">
+                                                                                <AlertTriangle size={9} strokeWidth={2.5} /> EXISTS
                                                                             </span>
                                                                         </div>
                                                                     ) : (
@@ -620,13 +650,13 @@ export default function BulkUpload({
                                                             );
                                                         })}
 
-                                                        <td className="px-2 py-0 h-10 align-middle text-center w-10">
+                                                        <td className="px-2 py-0 h-11 align-middle text-center w-10">
                                                             <button
                                                                 onClick={() => deleteRow(ri)}
-                                                                className="w-6 h-6 flex items-center justify-center rounded text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors mx-auto"
+                                                                className="w-7 h-7 flex items-center justify-center rounded-md text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors mx-auto"
                                                                 title="Delete row"
                                                             >
-                                                                <X size={12} />
+                                                                <X size={13} strokeWidth={2} />
                                                             </button>
                                                         </td>
                                                     </tr>
@@ -637,22 +667,22 @@ export default function BulkUpload({
                                             {Array.from({ length: Math.max(0, 8 - rows.length) }).map((_, i) => {
                                                 const ri = rows.length + i;
                                                 return (
-                                                    <tr key={`pad-${i}`} className={ri % 2 === 0 ? "bg-white" : "bg-slate-50/50"}>
-                                                        <td className="h-10 px-2 text-center align-middle w-10">
-                                                            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 text-[10px] font-semibold text-slate-200">
+                                                    <tr key={`pad-${i}`} className={ri % 2 === 0 ? "bg-white" : "bg-slate-50/40"}>
+                                                        <td className="h-11 px-2 text-center align-middle w-10">
+                                                            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-50 text-[10px] font-semibold text-slate-300">
                                                                 {ri + 1}
                                                             </span>
                                                         </td>
                                                         {currentCols.map((col, ci) => (
-                                                            <td key={col} className="h-10 border-r border-slate-100 last:border-r-0 px-3 align-middle whitespace-nowrap">
+                                                            <td key={col} className="h-11 border-r border-slate-100 last:border-r-0 px-3 align-middle whitespace-nowrap">
                                                                 {i === 0 && rows.length === 0 && ci === Math.floor(currentCols.length / 2) && (
-                                                                    <span className="text-xs text-slate-300 italic select-none whitespace-nowrap">
-                                                                        No data — type in a row or upload a file
+                                                                    <span className="text-xs text-slate-300 whitespace-nowrap">
+                                                                        No data yet — type in a row or upload a file
                                                                     </span>
                                                                 )}
                                                             </td>
                                                         ))}
-                                                        <td className="h-10 px-2 w-10" />
+                                                        <td className="h-11 px-2 w-10" />
                                                     </tr>
                                                 );
                                             })}
@@ -663,9 +693,9 @@ export default function BulkUpload({
 
                             {/* ── Row-level error list (footer) ──────────────── */}
                             {totalErrors > 0 && (
-                                <div className="px-4 py-2 border-t border-red-100 bg-red-50/50">
-                                    <p className="text-xs font-semibold text-red-700 mb-1 flex items-center gap-1.5">
-                                        <AlertTriangle size={11} />
+                                <div className="px-4 sm:px-5 py-3 border-t border-rose-100 bg-rose-50/40">
+                                    <p className="text-xs font-semibold text-rose-700 mb-1.5 flex items-center gap-1.5">
+                                        <AlertTriangle size={12} strokeWidth={2.5} />
                                         {totalErrors} row{totalErrors > 1 ? "s" : ""} with errors
                                         {cleanCount > 0 && (
                                             <span className="ml-1 font-normal text-slate-500">
@@ -676,7 +706,7 @@ export default function BulkUpload({
                                     <ul className="space-y-0.5 max-h-24 overflow-y-auto">
                                         {rows.map((row, ri) =>
                                             rowErrorsFlat[ri].map((err, ei) => (
-                                                <li key={`${ri}-${ei}`} className="text-xs text-red-600 flex items-start gap-1.5">
+                                                <li key={`${ri}-${ei}`} className="text-xs text-rose-600 flex items-start gap-1.5">
                                                     <span className="shrink-0 font-semibold">
                                                         Row {ri + 1}
                                                         {row.employee_number ? ` (${row.employee_number})` : ""}:
@@ -690,15 +720,15 @@ export default function BulkUpload({
                             )}
 
                             {/* Footer */}
-                            <div className="flex items-center justify-between px-3 py-2 border-t border-slate-100 bg-slate-50/60">
-                                <p className="text-xs text-slate-400">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-5 py-3 border-t border-slate-100 bg-slate-50/60">
+                                <p className="text-xs text-slate-400 hidden sm:block">
                                     Click any cell to edit · Dropdowns open on click · Enter or Tab to confirm · Esc to cancel
                                 </p>
                                 <Button
                                     size="sm"
                                     disabled={cleanCount === 0 || uploading}
                                     onClick={handleSubmit}
-                                    className="h-7 text-xs bg-blue-700 hover:bg-blue-800 text-white disabled:opacity-50 gap-1.5"
+                                    className="h-9 text-xs bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 gap-1.5 w-full sm:w-auto"
                                 >
                                     {uploading
                                         ? "Importing…"

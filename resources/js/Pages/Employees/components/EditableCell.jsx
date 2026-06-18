@@ -7,7 +7,7 @@ import { useState } from "react";
  *   value    — current value
  *   onChange — (value: string) => void
  *   type     — "text" | "date" | "number"
- *   error    — string | undefined  ← NEW
+ *   error    — string | undefined
  */
 export default function EditableCell({ value, onChange, type = "text", error }) {
     const [editing, setEditing] = useState(false);
@@ -17,7 +17,7 @@ export default function EditableCell({ value, onChange, type = "text", error }) 
 
     if (editing) {
         return (
-            <div className="relative h-12">
+            <div className="relative h-11">
                 <input
                     type={type}
                     value={draft}
@@ -28,10 +28,8 @@ export default function EditableCell({ value, onChange, type = "text", error }) 
                         if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); commit(draft); }
                         if (e.key === "Escape") { setDraft(value ?? ""); setEditing(false); }
                     }}
-                    className={`block w-full h-12 px-3 text-sm border-0 border-b-2 outline-none focus:ring-0 rounded-none ${
-                        error
-                            ? "bg-red-50 border-red-500"
-                            : "bg-blue-50 border-blue-500"
+                    className={`block w-full h-11 px-3 text-[13px] text-slate-800 border-0 outline-none ring-2 ring-inset rounded-none bg-white transition-shadow ${
+                        error ? "ring-rose-400" : "ring-indigo-400"
                     }`}
                 />
             </div>
@@ -39,39 +37,32 @@ export default function EditableCell({ value, onChange, type = "text", error }) 
     }
 
     return (
-        <div className="relative h-12 group">
+        <div className="relative h-11 group">
             <div
                 onClick={() => { setDraft(value ?? ""); setEditing(true); }}
-                className={`px-3 h-12 flex items-center text-sm cursor-pointer transition-colors ${
+                className={`px-3 h-11 flex items-center text-[13px] cursor-pointer transition-colors ${
                     error
-                        ? "hover:bg-red-50/60 text-slate-800"
+                        ? "hover:bg-rose-50/70 text-slate-800"
                         : value
-                            ? "hover:bg-blue-50/80 text-slate-800"
-                            : "hover:bg-blue-50/80 text-slate-400 italic"
+                            ? "hover:bg-slate-50 text-slate-700"
+                            : "hover:bg-slate-50 text-slate-300"
                 }`}
                 title={error || value || ""}
             >
-                <span className="truncate">{value || "click to edit"}</span>
-
-                {/* Error indicator dot */}
+                <span className="truncate">{value || "—"}</span>
                 {error && (
-                    <span className="ml-auto shrink-0 w-1.5 h-1.5 rounded-full bg-red-500" />
+                    <span className="ml-auto shrink-0 w-1.5 h-1.5 rounded-full bg-rose-500" />
                 )}
             </div>
 
-            {/* Tooltip on hover */}
             {error && (
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-50
                                 hidden group-hover:flex
                                 items-center gap-1 px-2 py-1
-                                bg-red-600 text-white text-[10px] font-medium rounded shadow-lg
+                                bg-slate-900 text-white text-[11px] font-medium rounded-md shadow-lg
                                 whitespace-nowrap pointer-events-none">
-                    <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
-                        <path d="M4.5 1L8 8H1L4.5 1Z" fill="currentColor" />
-                    </svg>
                     {error}
-                    {/* Caret */}
-                    <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-red-600" />
+                    <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900" />
                 </div>
             )}
         </div>

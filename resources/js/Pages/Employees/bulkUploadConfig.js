@@ -10,6 +10,7 @@ export const DATE_KEYS = [
 
 export const NUM_KEYS = [
     "probationary_period_months", "monthly_rate", "daily_rate", "hourly_rate",
+    "years_of_service",
 ];
 
 export const CELL_OPTIONS = {
@@ -38,35 +39,53 @@ export const TABS = [
         id: "personal",
         label: "Personal Info",
         icon: "👤",
-        cols: ["employee_number", "first_name", "middle_name", "last_name", "suffix",
-            "birth_date", "age", "gender", "civil_status", "nationality", "email", "phone_number"],
+        cols: [
+            "employee_number", "first_name", "middle_name", "last_name", "suffix",
+            "birth_date", "birth_place", "age", "gender", "civil_status",
+            "nationality", "religion",
+            "home_address", "current_address",
+            "phone_number", "telephone_number",
+            "email", "alternate_email",
+            "highest_education", "course", "school",
+        ],
     },
     {
         id: "employment",
         label: "Employment",
         icon: "💼",
-        cols: ["employment_type", "status", "hired_date", "regularization_date",
-               "contract_date_from", "contract_date_to", "contract_status", "job_level"],
+        cols: [
+            "employment_type", "status", "hired_date", "regularization_date",
+            "contract_date_from", "contract_date_to", "contract_status", "job_level",
+            "probationary_period_months", "probationary_evaluation_date",
+        ],
     },
     {
         id: "assignment",
         label: "Assignment",
         icon: "🏢",
-        cols: ["company_id", "branch_id", "department_id", "position_id", "probationary_period_months"],
+        cols: ["company_id", "branch_id", "department_id", "position_id"],
     },
     {
         id: "gov_ids",
         label: "Gov IDs",
         icon: "🪪",
-        cols: ["sss_number", "sss_status", "pagibig_number", "pagibig_status",
-               "philhealth_number", "philhealth_status", "tin_number", "tin_status"],
+        cols: [
+            "sss_number", "sss_status",
+            "pagibig_number", "pagibig_status",
+            "philhealth_number", "philhealth_status",
+            "tin_number", "tin_status",
+        ],
     },
     {
         id: "bank",
         label: "Bank",
         icon: "🏦",
-        cols: ["bank_name", "account_name", "account_number", "atm_card_number",
-               "atm_status", "gcash_account_number", "gcash_account_name"],
+        // account_number removed; other_bank_* added
+        cols: [
+            "bank_name", "account_name", "atm_card_number", "atm_status",
+            "gcash_account_number", "gcash_account_name",
+            "other_bank_type", "other_bank_name", "other_account_number", "other_account_name",
+        ],
     },
     {
         id: "compensation",

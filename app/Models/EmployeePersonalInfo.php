@@ -33,13 +33,13 @@ class EmployeePersonalInfo extends Model
     ];
 
     protected $casts = [
-        'date_of_birth'     => 'date:Y-m-d',
-        'is_active'         => 'boolean',
-        'age'               => 'integer',
+        'birth_date' => 'date:Y-m-d',
+        'is_active'  => 'boolean',
+        'age'        => 'integer',
     ];
 
-    // public function employee() : BelongsTo 
-    // {
-    //     return $this->belongsTo(Employee::class, 'employee_id', 'id');
-    // }
+    public function employee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'employee_id', 'id');
+    }
 }

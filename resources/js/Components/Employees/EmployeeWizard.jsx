@@ -7,26 +7,26 @@ import {
     bankAccountSchema,
     compensationSchema,
     workExperienceSchema,
-    emergencyContactSchema
+    emergencyContactSchema,
 } from "@/schemas/employeeSchema";
 
 import { Button } from "@/components/ui/button";
-import Step1PersonalInfo from "./Steps/Step1PersonalInfo";
+import Step1PersonalInfo      from "./Steps/Step1PersonalInfo";
 import Step2EmploymentDetails from "./Steps/Step2EmploymentDetails";
-import Step3GovIds from "./Steps/Step3GovIds";
-import Step4BankAccount from "./Steps/Step4BankAccount";
-import Step5Compensation from "./Steps/Step5Compensation";
-import Step6WorkExperience from "./Steps/Step6WorkExperience";
+import Step3GovIds            from "./Steps/Step3GovIds";
+import Step4BankAccount       from "./Steps/Step4BankAccount";
+import Step5Compensation      from "./Steps/Step5Compensation";
+import Step6WorkExperience    from "./Steps/Step6WorkExperience";
 import Step7EmergencyContacts from "./Steps/Step7EmergencyContacts";
 
 const STEPS = [
-    { id: 1, label: "Personal Info" },
-    { id: 2, label: "Employment Details" },
-    { id: 3, label: "Gov IDs" },
-    { id: 4, label: "Bank Account" },
-    { id: 5, label: "Compensation" },
+    { id: 1, label: "Personal Info"   },
+    { id: 2, label: "Employment"      },
+    { id: 3, label: "Gov IDs"         },
+    { id: 4, label: "Bank Account"    },
+    { id: 5, label: "Compensation"    },
     { id: 6, label: "Work Experience" },
-    { id: 7, label: "Emergency" },
+    { id: 7, label: "Emergency"       },
 ];
 
 const STEP_FIELDS = {
@@ -70,9 +70,8 @@ const STEP_SCHEMAS = {
     3: govIdsSchema,
     4: bankAccountSchema,
     5: compensationSchema,
-    6: workExperienceSchema, 
+    6: workExperienceSchema,
     7: emergencyContactSchema,
-    
 };
 
 function toDateInput(date) {
@@ -84,23 +83,23 @@ function getDefaultDates() {
     const sixMonthsLater = new Date(today);
     sixMonthsLater.setMonth(sixMonthsLater.getMonth() + 6);
     return {
-        hired_date: toDateInput(today),
+        hired_date:          toDateInput(today),
         regularization_date: toDateInput(sixMonthsLater),
-        effective_date: toDateInput(today)
+        effective_date:      toDateInput(today),
     };
 }
 
-const { hired_date, regularization_date,  effective_date } = getDefaultDates();
+const { hired_date, regularization_date, effective_date } = getDefaultDates();
 
 const emptyForm = {
-    // ── Employee ──────────────────────────────────────────────────
+    // Employee
     employee_number: "",
     first_name:      "",
     middle_name:     "",
     last_name:       "",
     suffix:          "",
 
-    // ── Personal Details ──────────────────────────────────────────
+    // Personal Details
     birth_date:        "",
     birth_place:       "",
     age:               "",
@@ -118,7 +117,7 @@ const emptyForm = {
     course:            "",
     school:            "",
 
-    // ── Employment Details ────────────────────────────────────────
+    // Employment Details
     hired_date,
     regularization_date,
     contract_date_from:           "",
@@ -134,7 +133,7 @@ const emptyForm = {
     probationary_period_months:   "",
     probationary_evaluation_date: "",
 
-    // ── Gov IDs — blank number → no_* status (non-nullable in DB) ─────────────
+    // Gov IDs
     sss_number:          "",
     sss_status:          "no_sss",
     sss_remarks:         "",
@@ -148,12 +147,12 @@ const emptyForm = {
     tin_status:          "no_tin",
     tin_remarks:         "",
 
-    // ── Bank Account ──────────────────────────────────────────────
+    // Bank Account
     bank_name:            "",
     account_number:       "",
     account_name:         "",
     atm_card_number:      "",
-    atm_status:           "pending",  
+    atm_status:           "pending",
     gcash_account_number: "",
     gcash_account_name:   "",
     other_bank_type:      "",
@@ -161,7 +160,7 @@ const emptyForm = {
     other_account_number: "",
     other_account_name:   "",
 
-    // ── Compensation ──────────────────────────────────────────────
+    // Compensation
     work_time_factor_id: "",
     monthly_rate:        "",
     daily_rate:          "",
@@ -171,10 +170,8 @@ const emptyForm = {
     effective_date,
     is_current:          true,
 
-    // ── Work Experiance ──────────────────────────────────────────────
-    work_experiences: [],
-
-    // ── Emergency Contact ──────────────────────────────────────────────
+    // Arrays
+    work_experiences:   [],
     emergency_contacts: [],
 };
 
@@ -184,38 +181,71 @@ function pickStepData(form, stepId) {
     );
 }
 
+// ─── Flatten Zod issues into a { fieldKey: firstMessage } map ────────────────
+// Handles both top-level fields and nested array fields:
+//   path = ["work_experiences", 0, "end_date"]  →  "work_experiences.0.end_date"
+//   path = ["emergency_contacts", 1, "contact_person_phone"] → same pattern
+
+function flattenZodErrors(zodError) {
+    const fieldErrors = {};
+    for (const issue of zodError.issues) {
+        if (issue.path.length === 0) continue;
+
+        // Build a dot-notation key from the path array
+        const key = issue.path
+            .map((segment) => String(segment))
+            .join(".");
+
+        if (!fieldErrors[key]) {
+            fieldErrors[key] = issue.message;
+        }
+    }
+    return fieldErrors;
+}
+
 function validateStep(stepId, form) {
     const schema = STEP_SCHEMAS[stepId];
     const data   = pickStepData(form, stepId);
     const result = schema.safeParse(data);
-
     if (result.success) return {};
+    return flattenZodErrors(result.error);
+}
 
-    const fieldErrors = {};
-    result.error.issues.forEach((err) => {
-        const key = err.path[0];
-        if (key && !fieldErrors[key]) fieldErrors[key] = err.message;
-    });
-    return fieldErrors;
+// ─── Count errors that belong to a step ──────────────────────────────────────
+// Top-level fields are checked by inclusion in STEP_FIELDS[stepId].
+// Nested array errors start with "work_experiences." or "emergency_contacts."
+
+function countStepErrors(errors, stepId) {
+    let count = 0;
+    const topLevelSet = new Set(STEP_FIELDS[stepId]);
+
+    for (const key of Object.keys(errors)) {
+        const rootKey = key.split(".")[0]; // e.g. "work_experiences" or "employee_number"
+        if (topLevelSet.has(rootKey)) count++;
+    }
+    return count;
 }
 
 export default function EmployeeWizard({
     initialData,
     onSubmit,
-    companies   = [],
-    branches    = [],
-    departments = [],
-    positions   = [],
-    workTimeFactors = [],  
+    companies       = [],
+    branches        = [],
+    departments     = [],
+    positions       = [],
+    workTimeFactors = [],
 }) {
     const [step,    setStep]    = useState(1);
     const [form,    setForm]    = useState(initialData ? { ...emptyForm, ...initialData } : emptyForm);
     const [errors,  setErrors]  = useState({});
     const [visited, setVisited] = useState(new Set([1]));
 
+    // ── Field change handlers ─────────────────────────────────────────────────
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         setForm((prev) => ({ ...prev, [name]: value }));
+        // Clear the error for this exact key (including nested keys like "work_experiences.0.end_date")
         if (errors[name]) {
             setErrors((prev) => {
                 const next = { ...prev };
@@ -225,18 +255,41 @@ export default function EmployeeWizard({
         }
     };
 
+    const handleBulkChange = (fields) => {
+        setForm((prev) => ({ ...prev, ...fields }));
+        setErrors((prev) => {
+            const next = { ...prev };
+            // Clear top-level keys
+            Object.keys(fields).forEach((key) => delete next[key]);
+            // Also clear any nested errors for array fields (e.g. clearing work_experiences clears work_experiences.0.*)
+            Object.keys(fields).forEach((key) => {
+                Object.keys(next).forEach((errKey) => {
+                    if (errKey.startsWith(key + ".")) delete next[errKey];
+                });
+            });
+            return next;
+        });
+    };
+
+    // ── Step error badge counts ───────────────────────────────────────────────
+
     const stepErrorCounts = useMemo(() => {
-        const counts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 };
-        Object.keys(errors).forEach((key) => {
+        const counts = {};
+        STEPS.forEach((s) => { counts[s.id] = 0; });
+
+        for (const key of Object.keys(errors)) {
+            const rootKey = key.split(".")[0];
             for (const [stepId, fields] of Object.entries(STEP_FIELDS)) {
-                if (fields.includes(key)) {
+                if (fields.includes(rootKey)) {
                     counts[Number(stepId)]++;
                     break;
                 }
             }
-        });
+        }
         return counts;
     }, [errors]);
+
+    // ── Navigation ────────────────────────────────────────────────────────────
 
     const goToStep = (targetStep) => {
         setVisited((prev) => new Set([...prev, targetStep]));
@@ -249,9 +302,13 @@ export default function EmployeeWizard({
         if (Object.keys(stepErrors).length > 0) {
             setErrors((prev) => ({ ...prev, ...stepErrors }));
         } else {
+            // Clear all errors for fields belonging to this step
             setErrors((prev) => {
                 const next = { ...prev };
-                STEP_FIELDS[step].forEach((key) => delete next[key]);
+                const topLevelSet = new Set(STEP_FIELDS[step]);
+                for (const key of Object.keys(next)) {
+                    if (topLevelSet.has(key.split(".")[0])) delete next[key];
+                }
                 return next;
             });
         }
@@ -261,24 +318,24 @@ export default function EmployeeWizard({
 
     const back = () => goToStep(step - 1);
 
+    // ── Submit ────────────────────────────────────────────────────────────────
+
     const handleSubmit = () => {
         const result = employeeSchema.safeParse(form);
 
         if (!result.success) {
-            const fieldErrors = {};
-            result.error.issues.forEach((err) => {
-                const key = err.path[0];
-                if (key && !fieldErrors[key]) fieldErrors[key] = err.message;
-            });
-
+            const fieldErrors = flattenZodErrors(result.error);
             setErrors(fieldErrors);
             setVisited(new Set([1, 2, 3, 4, 5, 6, 7]));
 
+            // Navigate to the step containing the first error
             const firstErrorKey = result.error.issues[0]?.path?.[0];
-            for (const [stepId, fields] of Object.entries(STEP_FIELDS)) {
-                if (fields.includes(firstErrorKey)) {
-                    setStep(Number(stepId));
-                    break;
+            if (firstErrorKey) {
+                for (const [stepId, fields] of Object.entries(STEP_FIELDS)) {
+                    if (fields.includes(String(firstErrorKey))) {
+                        setStep(Number(stepId));
+                        break;
+                    }
                 }
             }
             return;
@@ -291,15 +348,7 @@ export default function EmployeeWizard({
         setErrors({});
     };
 
-    const handleBulkChange = (fields) => {
-        setForm((prev) => ({ ...prev, ...fields }));
-        // Clear errors for any field in the batch
-        setErrors((prev) => {
-            const next = { ...prev };
-            Object.keys(fields).forEach((key) => delete next[key]);
-            return next;
-        });
-    };
+    // ── Step renderer ─────────────────────────────────────────────────────────
 
     const renderStep = () => {
         switch (step) {
@@ -362,6 +411,8 @@ export default function EmployeeWizard({
             default: return null;
         }
     };
+
+    // ── Render ────────────────────────────────────────────────────────────────
 
     return (
         <div className="space-y-6">

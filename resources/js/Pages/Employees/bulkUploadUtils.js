@@ -2,6 +2,11 @@
 
 import { REQUIRED, DATE_KEYS, NUM_KEYS, CELL_OPTIONS, FK_COLS } from "./bulkUploadConfig";
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+export const isBlank = (v) => v === "" || v === null || v === undefined;
+const isDate         = (v) => !isBlank(v) && !isNaN(new Date(v));
+const parseD         = (v) => new Date(v);
+
 // ── Date parser ───────────────────────────────────────────────────────────────
 export const parseDate = (val) => {
     if (!val) return "";
@@ -11,6 +16,40 @@ export const parseDate = (val) => {
     const d = new Date(s);
     return isNaN(d) ? "" : d.toISOString().slice(0, 10);
 };
+
+// ── Date helpers ──────────────────────────────────────────────────────────────
+function toDateInput(date) {
+    return date.toISOString().split("T")[0];
+}
+
+function addMonths(date, months) {
+    const result = new Date(date);
+    result.setMonth(result.getMonth() + months);
+    return result;
+}
+
+// ── Contract status deriver ───────────────────────────────────────────────────
+// "expired" if contract_date_to is strictly before today (yesterday or earlier)
+function deriveContractStatus(endDateStr) {
+    if (!endDateStr) return "valid";
+    const end   = new Date(endDateStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+    return end < today ? "expired" : "valid";
+}
+
+// ── Years-of-service calculator ───────────────────────────────────────────────
+// Returns a number rounded to 2 decimal places, or "" if dates are invalid.
+function calcYearsOfService(startDateStr, endDateStr) {
+    if (!isDate(startDateStr) || !isDate(endDateStr)) return "";
+    const start = parseD(startDateStr);
+    const end   = parseD(endDateStr);
+    if (end < start) return "";
+    const ms      = end - start;
+    const years   = ms / (1000 * 60 * 60 * 24 * 365.25);
+    return Math.round(years * 100) / 100;
+}
 
 // ── Gov ID formatter (mirrors GovIdCell logic, used for Excel imports) ────────
 const GOV_ID_FORMATS = {
@@ -48,7 +87,6 @@ export function parseRow(raw) {
     const row = { ...raw };
     DATE_KEYS.forEach(k => { if (k in row) row[k] = parseDate(row[k]); });
     NUM_KEYS.forEach(k => { if (row[k] !== undefined && row[k] !== "") row[k] = Number(row[k]) || ""; });
-    // Auto-format gov ID numbers (Excel may have raw digits or existing dashes)
     Object.keys(GOV_ID_FORMATS).forEach(k => {
         if (k in row && row[k] !== "" && row[k] !== null && row[k] !== undefined)
             row[k] = formatGovId(row[k], k);
@@ -58,21 +96,29 @@ export function parseRow(raw) {
 
 // ── Smart defaults ────────────────────────────────────────────────────────────
 /**
- * Applies smart default logic for gov ID statuses and ATM status.
- * Called after parseRow (on Excel import) and after any cell update in BulkUpload.
- *
- * Gov ID status rules:
- *   - number blank  → default to no_<id>  (regardless of what status says)
- *   - number filled + status blank → default to "for_verification"
- *   - number filled + status filled → keep the status from Excel / user input
- *
- * ATM status rules:
- *   - blank → default to "pending"
- *   - filled → keep as-is
+ * Applies smart default logic for:
+ *   - Gov ID statuses (no_* when number blank, for_verification when number present)
+ *   - ATM status (pending when blank)
+ *   - is_current / is_active (always true)
+ *   - Employment type rules:
+ *       probationary / regular →
+ *           - contract_date_from / contract_date_to are always cleared (not used)
+ *           - contract_status is locked to "valid"
+ *           - probationary_period_months defaults to 6
+ *           - regularization_date = hired_date + probationary_period_months (always recomputed)
+ *           - probationary_evaluation_date always mirrors regularization_date
+ *       all others →
+ *           - contract dates are optional; contract_status auto-derives from contract_date_to
+ *           - probationary-specific fields are cleared
  */
 export function applyRowDefaults(row) {
     const r = { ...row };
 
+    // ── is_current / is_active always true ───────────────────────────────────
+    r.is_current = true;
+    r.is_active  = true;
+
+    // ── Gov ID status defaults ────────────────────────────────────────────────
     const GOV_IDS = [
         { num: "sss_number",        status: "sss_status",        noVal: "no_sss"        },
         { num: "pagibig_number",    status: "pagibig_status",    noVal: "no_pagibig"    },
@@ -81,41 +127,68 @@ export function applyRowDefaults(row) {
     ];
 
     GOV_IDS.forEach(({ num, status, noVal }) => {
-        const hasNumber = !isBlank(r[num]) && String(r[num]).trim() !== "";
+        const hasNumber     = !isBlank(r[num]) && String(r[num]).trim() !== "";
         const currentStatus = String(r[status] ?? "").trim();
 
         if (!hasNumber) {
-            // Number blank/cleared → always force to no_*
             r[status] = noVal;
         } else if (currentStatus === noVal || isBlank(r[status])) {
-            // Number just filled in and status is still no_* or blank → for_verification
             r[status] = "for_verification";
         }
-        // Status is already "for_verification" or "verified" → leave it alone
     });
 
+    // ── ATM status default ────────────────────────────────────────────────────
     if (isBlank(r.atm_status) || String(r.atm_status).trim() === "") {
         r.atm_status = "pending";
+    }
+
+    // ── Employment type rules ─────────────────────────────────────────────────
+    const PROBATION_TYPES = ["probationary", "regular"];
+    const isProbation     = PROBATION_TYPES.includes(String(r.employment_type ?? ""));
+
+    if (isProbation) {
+        // Probationary / regular: no contract date range — keep blank,
+        // contract_status is locked to "valid"
+        r.contract_date_from = "";
+        r.contract_date_to   = "";
+        r.contract_status    = "valid";
+
+        // Probationary period default: 6 months
+        if (isBlank(r.probationary_period_months)) {
+            r.probationary_period_months = 6;
+        }
+
+        // Regularization date = hired_date + probationary_period_months (always recomputed)
+        if (isDate(r.hired_date)) {
+            const months = Number(r.probationary_period_months) || 6;
+            r.regularization_date = toDateInput(addMonths(parseD(r.hired_date), months));
+        } else {
+            r.regularization_date = "";
+        }
+
+        // Probationary evaluation date always mirrors regularization date
+        r.probationary_evaluation_date = r.regularization_date;
+
+    } else if (!isBlank(r.employment_type)) {
+        // Non-probationary: contract dates are optional; auto-derive contract_status if a date is given
+        if (isBlank(r.contract_status) || !["valid", "expired", "renewed", "terminated"].includes(String(r.contract_status))) {
+            r.contract_status = deriveContractStatus(r.contract_date_to);
+        } else if (!isBlank(r.contract_date_to)) {
+            // Always override if the end date is clearly in the past
+            const derived = deriveContractStatus(r.contract_date_to);
+            if (derived === "expired") r.contract_status = "expired";
+        }
+
+        // Clear probationary-specific fields
+        r.regularization_date          = "";
+        r.probationary_period_months   = "";
+        r.probationary_evaluation_date = "";
     }
 
     return r;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-const isBlank  = (v) => v === "" || v === null || v === undefined;
-const isDate   = (v) => !isBlank(v) && !isNaN(new Date(v));
-const parseD   = (v) => new Date(v);
-
 // ── Row validator ─────────────────────────────────────────────────────────────
-/**
- * Returns { fieldErrors: Record<string, string[]>, rowErrors: string[] }
- *
- * @param {object}   row              - The row data object
- * @param {object[]} allRows          - All rows in the current upload (for duplicate detection)
- * @param {number}   currentIndex     - Index of this row in allRows
- * @param {Set}      existingNumbers  - Set<string> of employee_numbers already in the DB (lowercased)
- * @param {object}   fkOptions        - { company_id: [{value, label}], branch_id: [...], ... }
- */
 export function validateRow(
     row,
     allRows,
@@ -123,8 +196,8 @@ export function validateRow(
     existingNumbers = new Set(),
     fkOptions       = {}
 ) {
-    const fieldErrors = {}; // col → string[]
-    const rowErrors   = []; // row-level messages not tied to a single field
+    const fieldErrors = {};
+    const rowErrors   = [];
 
     const addField = (col, msg) => {
         if (!fieldErrors[col]) fieldErrors[col] = [];
@@ -137,7 +210,7 @@ export function validateRow(
             addField(k, `${colLabel(k)} is required`);
     });
 
-    // ── Employee fields ───────────────────────────────────────────────────────
+    // ── Employee / name fields ────────────────────────────────────────────────
     if (!isBlank(row.employee_number) && String(row.employee_number).length > 50)
         addField("employee_number", "Employee number must be 50 characters or less");
 
@@ -154,7 +227,6 @@ export function validateRow(
         addField("suffix", "Suffix must be 50 characters or less");
 
     // ── Personal Info ─────────────────────────────────────────────────────────
-
     if (!isBlank(row.birth_date) && !isDate(row.birth_date))
         addField("birth_date", "Please enter a valid birth date");
 
@@ -163,9 +235,9 @@ export function validateRow(
 
     if (!isBlank(row.age)) {
         const age = Number(row.age);
-        if (!Number.isInteger(age))  addField("age", "Age must be a whole number");
-        else if (age < 0)            addField("age", "Age must be 0 or more");
-        else if (age > 150)          addField("age", "Age must be 150 or less");
+        if (!Number.isInteger(age)) addField("age", "Age must be a whole number");
+        else if (age < 0)           addField("age", "Age must be 0 or more");
+        else if (age > 150)         addField("age", "Age must be 150 or less");
     }
 
     if (!isBlank(row.gender) && !["Male", "Female"].includes(row.gender))
@@ -194,17 +266,13 @@ export function validateRow(
 
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!isBlank(row.email)) {
-        if (String(row.email).length > 255)
-            addField("email", "Email must be 255 characters or less");
-        else if (!emailRe.test(row.email))
-            addField("email", "Invalid email address");
+        if (String(row.email).length > 255) addField("email", "Email must be 255 characters or less");
+        else if (!emailRe.test(row.email))  addField("email", "Invalid email address");
     }
 
     if (!isBlank(row.alternate_email)) {
-        if (String(row.alternate_email).length > 255)
-            addField("alternate_email", "Alternate email must be 255 characters or less");
-        else if (!emailRe.test(row.alternate_email))
-            addField("alternate_email", "Invalid alternate email address");
+        if (String(row.alternate_email).length > 255)       addField("alternate_email", "Alternate email must be 255 characters or less");
+        else if (!emailRe.test(row.alternate_email))        addField("alternate_email", "Invalid alternate email address");
     }
 
     if (!isBlank(row.highest_education) && String(row.highest_education).length > 100)
@@ -216,7 +284,7 @@ export function validateRow(
     if (!isBlank(row.school) && String(row.school).length > 255)
         addField("school", "School must be 255 characters or less");
 
-    // age cross-check from birth_date
+    // Age cross-check from birth_date
     if (isDate(row.birth_date)) {
         const birth = parseD(row.birth_date);
         const today = new Date();
@@ -227,7 +295,6 @@ export function validateRow(
     }
 
     // ── Employment Details ────────────────────────────────────────────────────
-
     if (!isBlank(row.hired_date) && !isDate(row.hired_date))
         addField("hired_date", "Please enter a valid hired date");
 
@@ -244,43 +311,26 @@ export function validateRow(
         parseD(row.contract_date_to) < parseD(row.contract_date_from))
         addField("contract_date_to", "Contract end date must be on or after the start date");
 
-    if (!isBlank(row.contract_status) && String(row.contract_status).length > 50)
-        addField("contract_status", "Contract status must be 50 characters or less");
-
-    if (!isBlank(row.employment_type) && String(row.employment_type).length > 50)
-        addField("employment_type", "Employment type must be 50 characters or less");
-
-    if (!isBlank(row.status) && String(row.status).length > 50)
-        addField("status", "Status must be 50 characters or less");
-
     if (!isBlank(row.job_level) && String(row.job_level).length > 50)
         addField("job_level", "Job level must be 50 characters or less");
 
     if (!isBlank(row.probationary_period_months)) {
         const v = Number(row.probationary_period_months);
-        if (!Number.isInteger(v))  addField("probationary_period_months", "Probationary period must be a whole number");
-        else if (v < 0)            addField("probationary_period_months", "Probationary period must be 0 or more");
-        else if (v > 24)           addField("probationary_period_months", "Probationary period must be 24 months or less");
+        if (!Number.isInteger(v)) addField("probationary_period_months", "Probationary period must be a whole number");
+        else if (v < 0)           addField("probationary_period_months", "Probationary period must be 0 or more");
+        else if (v > 24)          addField("probationary_period_months", "Probationary period must be 24 months or less");
     }
 
     if (!isBlank(row.probationary_evaluation_date) && !isDate(row.probationary_evaluation_date))
         addField("probationary_evaluation_date", "Please enter a valid probationary evaluation date");
 
     // ── Gov IDs ───────────────────────────────────────────────────────────────
-    // Format rules (dashes are part of the stored value after GovIdCell formats it;
-    // we also accept raw digits so Excel imports without dashes still validate):
-    //   SSS        → XX-XXXXXXX-X        (10 digits)
-    //   Pag-IBIG   → XXXX-XXXX-XXXX      (12 digits)
-    //   PhilHealth → XX-XXXXXXXXX-X      (12 digits)
-    //   TIN        → XXX-XXX-XXX[-XXX]   (9 or 12 digits)
-
     const GOV_ID_FIELDS = [
         {
             num:     "sss_number",
             status:  "sss_status",
             label:   "SSS",
             allowed: ["no_sss", "for_verification", "verified"],
-            // Accept with or without dashes: 10 digits total
             regex:   /^\d{2}-?\d{7}-?\d{1}$|^\d{10}$/,
             hint:    "XX-XXXXXXX-X (10 digits)",
         },
@@ -289,7 +339,6 @@ export function validateRow(
             status:  "pagibig_status",
             label:   "Pag-IBIG",
             allowed: ["no_pagibig", "for_verification", "verified"],
-            // 12 digits: XXXX-XXXX-XXXX
             regex:   /^\d{4}-?\d{4}-?\d{4}$|^\d{12}$/,
             hint:    "XXXX-XXXX-XXXX (12 digits)",
         },
@@ -298,7 +347,6 @@ export function validateRow(
             status:  "philhealth_status",
             label:   "PhilHealth",
             allowed: ["no_philhealth", "for_verification", "verified"],
-            // 12 digits: XX-XXXXXXXXX-X
             regex:   /^\d{2}-?\d{9}-?\d{1}$|^\d{12}$/,
             hint:    "XX-XXXXXXXXX-X (12 digits)",
         },
@@ -307,7 +355,6 @@ export function validateRow(
             status:  "tin_status",
             label:   "TIN",
             allowed: ["no_tin", "for_verification", "verified"],
-            // 9 digits: XXX-XXX-XXX  or  12 digits: XXX-XXX-XXX-XXX
             regex:   /^\d{3}-?\d{3}-?\d{3}$|^\d{3}-?\d{3}-?\d{3}-?\d{3}$|^\d{9}$|^\d{12}$/,
             hint:    "XXX-XXX-XXX (9 digits) or XXX-XXX-XXX-XXX (12 digits)",
         },
@@ -319,16 +366,14 @@ export function validateRow(
             if (!regex.test(val))
                 addField(num, `Invalid ${label} format — expected ${hint}`);
         }
-
-        // Status is always set by applyRowDefaults, so validate it's a valid enum
         if (!isBlank(row[status]) && !allowed.includes(String(row[status])))
             addField(status, `Invalid ${label} status. Allowed: ${allowed.join(", ")}`);
     });
 
     // ── Bank Account ──────────────────────────────────────────────────────────
-
+    // account_number removed from bank; ATM card number is the primary account ref
     const BANK_FIELDS_255 = [
-        "bank_name", "account_name", "account_number", "atm_card_number",
+        "bank_name", "account_name", "atm_card_number",
         "gcash_account_number", "gcash_account_name",
         "other_bank_type", "other_bank_name", "other_account_number", "other_account_name",
     ];
@@ -336,8 +381,9 @@ export function validateRow(
         if (!isBlank(row[f]) && String(row[f]).length > 255)
             addField(f, `${colLabel(f)} must be 255 characters or less`);
     });
-    // Account numbers must be digits only
-    const NUMERIC_ACCOUNT_FIELDS = ["account_number", "atm_card_number", "gcash_account_number", "other_account_number"];
+
+    // Numeric-only account number fields
+    const NUMERIC_ACCOUNT_FIELDS = ["atm_card_number", "gcash_account_number", "other_account_number"];
     NUMERIC_ACCOUNT_FIELDS.forEach(f => {
         if (!isBlank(row[f]) && !/^\d+$/.test(String(row[f]).trim()))
             addField(f, `${colLabel(f)} must contain numbers only`);
@@ -346,11 +392,7 @@ export function validateRow(
     if (!isBlank(row.atm_status) && !["pending", "released", "active", "inactive"].includes(String(row.atm_status)))
         addField("atm_status", "Invalid ATM status. Allowed: pending, released, active, inactive");
 
-    if (!isBlank(row.atm_status) && !["pending", "released", "active", "inactive"].includes(String(row.atm_status)))
-        addField("atm_status", "Invalid ATM status. Allowed: pending, released, active, inactive");
-
     // ── Compensation ──────────────────────────────────────────────────────────
-
     ["monthly_rate", "daily_rate", "hourly_rate"].forEach(k => {
         if (!isBlank(row[k])) {
             const v = Number(row[k]);
@@ -373,7 +415,6 @@ export function validateRow(
     // ── CELL_OPTIONS enum validation ──────────────────────────────────────────
     Object.entries(CELL_OPTIONS).forEach(([col, allowed]) => {
         if (isBlank(row[col])) return;
-        // Skip cols already validated with custom messages above
         if (["gender", "civil_status", "atm_status",
              "sss_status", "pagibig_status", "philhealth_status", "tin_status",
              "payroll_type", "salary_type"].includes(col)) return;
@@ -441,11 +482,7 @@ export function validateRow(
             parseD(exp.end_date) < parseD(exp.start_date))
             addField(prefix + ".end_date", `Entry ${ei + 1}: End date must be on or after the start date`);
 
-        if (!isBlank(exp.years_of_service)) {
-            const v = Number(exp.years_of_service);
-            if (isNaN(v) || v < 0)
-                addField(prefix + ".years_of_service", `Entry ${ei + 1}: Years of service must be a valid number (0 or more)`);
-        }
+        // years_of_service is auto-computed — no manual validation needed
     });
 
     // ── Emergency contact sub-row validation ──────────────────────────────────
@@ -471,14 +508,12 @@ export function validateRow(
     return { fieldErrors, rowErrors };
 }
 
-// ── Flat helper — collapses { fieldErrors, rowErrors } into a string[] ────────
+// ── Flat helper ───────────────────────────────────────────────────────────────
 export function flatErrors({ fieldErrors, rowErrors }) {
     return [...Object.values(fieldErrors).flat(), ...rowErrors];
 }
 
 // ── Empty-row factory ─────────────────────────────────────────────────────────
-// Gov ID statuses default to no_* because numbers start blank.
-// ATM status defaults to "pending".
 export const emptyWorkExp = () => ({
     company_name: "", position: "", department: "",
     start_date: "", end_date: "", years_of_service: "", remarks: "",
@@ -490,31 +525,57 @@ export const emptyContact = () => ({
 });
 
 export const emptyRow = () => ({
+    // Identity
     employee_number: "", first_name: "", middle_name: "", last_name: "", suffix: "",
-    birth_date: "", birth_place: "", age: "", gender: "", civil_status: "",
-    nationality: "", religion: "", email: "", phone_number: "", telephone_number: "",
-    alternate_email: "", home_address: "", current_address: "",
+
+    // Personal
+    birth_date: "", birth_place: "", age: "",
+    gender: "", civil_status: "", nationality: "", religion: "",
+    home_address: "", current_address: "",
+    phone_number: "", telephone_number: "",
+    email: "", alternate_email: "",
     highest_education: "", course: "", school: "",
-    employment_type: "", status: "active", hired_date: "", regularization_date: "",
-    contract_date_from: "", contract_date_to: "", contract_status: "", job_level: "",
+
+    // Employment
+    employment_type: "", status: "active",
+    hired_date: "", regularization_date: "",
+    contract_date_from: "", contract_date_to: "", contract_status: "valid",
+    job_level: "",
     company_id: "", branch_id: "", department_id: "", position_id: "",
-    probationary_period_months: "", probationary_evaluation_date: "",
-    // Gov IDs: no number yet → no_* status
-    sss_number: "",        sss_status: "no_sss",        sss_remarks: "",
-    pagibig_number: "",    pagibig_status: "no_pagibig",    pagibig_remarks: "",
+    probationary_period_months: 6, probationary_evaluation_date: "",
+
+    // Gov IDs
+    sss_number: "",        sss_status: "no_sss",         sss_remarks: "",
+    pagibig_number: "",    pagibig_status: "no_pagibig",  pagibig_remarks: "",
     philhealth_number: "", philhealth_status: "no_philhealth", philhealth_remarks: "",
-    tin_number: "",        tin_status: "no_tin",        tin_remarks: "",
-    // Bank
-    bank_name: "", account_name: "", account_number: "", atm_card_number: "",
-    atm_status: "pending", gcash_account_number: "", gcash_account_name: "",
+    tin_number: "",        tin_status: "no_tin",          tin_remarks: "",
+
+    // Bank — account_number removed; other_bank_* added
+    bank_name: "", account_name: "", atm_card_number: "",
+    atm_status: "pending",
+    gcash_account_number: "", gcash_account_name: "",
     other_bank_type: "", other_bank_name: "", other_account_number: "", other_account_name: "",
-    // Compensation
-    monthly_rate: "", daily_rate: "", hourly_rate: "", payroll_type: "",
-    salary_type: "", effective_date: "", is_current: true,
-    work_experiences: [],
+
+    // Compensation — is_current always true
+    monthly_rate: "", daily_rate: "", hourly_rate: "",
+    payroll_type: "", salary_type: "",
+    effective_date: "", is_current: true,
+
+    // System
+    is_active: true,
+
+    // Arrays
+    work_experiences:   [],
     emergency_contacts: [],
 });
 
 // ── Column label formatter ────────────────────────────────────────────────────
 export const colLabel = (col) =>
     col.replace(/_id$/, "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+
+// ── Auto-compute years_of_service when a work experience entry's dates change ─
+// Call this from WorkExperiencePanel whenever start_date or end_date changes.
+export function autoComputeYears(entry) {
+    const yos = calcYearsOfService(entry.start_date, entry.end_date);
+    return { ...entry, years_of_service: yos };
+}

@@ -10,9 +10,11 @@ use App\Models\EmployeePersonalInfo;
 use App\Models\EmployeeGovIds;
 use App\Models\EmployeeBankAccount;
 use App\Models\EmployeeEmergencyContact;
-use App\Models\EmployeeWorkExperiance;
+use App\Models\EmployeeWorkExperience;
 use App\Models\EmployeeCompensation;
 use App\Models\EmployeeDocuments;
+use App\Models\EmploymentDetails;
+use App\Models\EmployeeStatusLog;
 
 class Employee extends Model
 {
@@ -25,7 +27,8 @@ class Employee extends Model
         'first_name',
         'middle_name',
         'last_name',
-        'suffix', 
+        'suffix',
+        'status',
     ];
 
     public function personalInfo(): HasOne
@@ -43,12 +46,12 @@ class Employee extends Model
         return $this->hasOne(EmployeeBankAccount::class, 'employee_id', 'id');
     }
 
-    public function emergencyContacts() : HasMany 
+    public function emergencyContacts(): HasMany
     {
         return $this->hasMany(EmployeeEmergencyContact::class, 'employee_id', 'id');
     }
 
-    public function workExperience() : HasMany 
+    public function workExperience(): HasMany
     {
         return $this->hasMany(EmployeeWorkExperience::class, 'employee_id', 'id');
     }
@@ -67,18 +70,18 @@ class Employee extends Model
                     ->orderBy('effective_date', 'desc');
     }
 
-    public function document() : HasMany 
+    public function document(): HasMany
     {
         return $this->hasMany(EmployeeDocuments::class, 'employee_id', 'id');
     }
 
-    public function employmentDetails() : hasOne 
+    public function employmentDetails(): HasOne
     {
         return $this->hasOne(EmploymentDetails::class, 'employee_id', 'id');
     }
 
     public function statusLogs(): HasMany
     {
-        return $this->hasMany(EmployeeStatusLog::class);
+        return $this->hasMany(EmployeeStatusLog::class, 'employee_id', 'id');
     }
 }

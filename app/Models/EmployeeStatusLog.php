@@ -3,32 +3,33 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Models\User;
 
 class EmployeeStatusLog extends Model
 {
     protected $fillable = [
         'employee_id',
+        'type',
         'previous_status',
         'new_status',
         'effective_date',
         'last_working_date',
         'reason',
         'changed_by',
+        'applied_at',
     ];
 
     protected $casts = [
-        'effective_date'   => 'date',
+        'effective_date'    => 'date',
         'last_working_date' => 'date',
+        'applied_at'        => 'datetime',
     ];
 
-    public function employee(): BelongsTo
+    public function employee()
     {
         return $this->belongsTo(Employee::class);
     }
 
-    public function changedBy(): BelongsTo
+    public function changedBy()
     {
         return $this->belongsTo(User::class, 'changed_by');
     }

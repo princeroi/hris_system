@@ -1,3 +1,5 @@
+// resources/js/Components/Employees/Steps/Step2EmploymentDetails.jsx
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -32,7 +34,6 @@ function Field({ label, required, error, hint, children }) {
 }
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
-
 function toDateInput(date) {
   return date.toISOString().split("T")[0];
 }
@@ -47,15 +48,22 @@ function todayInput() {
   return toDateInput(new Date());
 }
 
+/**
+ * Derives contract_status from contract_date_to:
+ *   - blank          → "valid"
+ *   - past (< today) → "expired"
+ *   - today or future → "valid"
+ */
 function deriveContractStatus(endDateStr) {
-  if (!endDateStr) return "";
-  const end = new Date(endDateStr);
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
+  if (!endDateStr) return "valid";
+  const end   = new Date(endDateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   end.setHours(0, 0, 0, 0);
-  return end >= now ? "valid" : "expired";
+  return end < today ? "expired" : "valid";
 }
 
+// Employment types that use contract dates instead of regularization
 const CONTRACT_TYPES  = ["contractual", "project_based", "part_time", "intern"];
 const RELIEVER_TYPE   = "reliever";
 const PROBATION_TYPES = ["probationary", "regular"];
@@ -79,12 +87,13 @@ export default function Step2EmploymentDetails({
 
     const type = form.employment_type;
 
-    if (type === "regular" || type === "probationary") {
-      onChange({ target: { name: "regularization_date",          value: toDateInput(addMonths(hired, 6)) } });
-      onChange({ target: { name: "probationary_evaluation_date", value: toDateInput(addMonths(hired, 6)) } });
+    if (PROBATION_TYPES.includes(type)) {
+      const regDate  = toDateInput(addMonths(hired, 6));
+      const evalDate = toDateInput(addMonths(hired, Number(form.probationary_period_months) || 6));
+      onChange({ target: { name: "regularization_date",          value: regDate  } });
+      onChange({ target: { name: "probationary_evaluation_date", value: evalDate } });
     }
 
-    // Contract types: seed contract_date_from from hired date if not already set
     if (CONTRACT_TYPES.includes(type) && !form.contract_date_from) {
       onChange({ target: { name: "contract_date_from", value: toDateInput(hired) } });
     }
@@ -98,27 +107,37 @@ export default function Step2EmploymentDetails({
 
     onChange({ target: { name: "status", value: "active" } });
 
-    if (value === "regular" || value === "probationary") {
-      onChange({ target: { name: "regularization_date",          value: toDateInput(addMonths(hired, 6)) } });
-      onChange({ target: { name: "contract_date_from",           value: "" } });
-      onChange({ target: { name: "contract_date_to",             value: "" } });
-      onChange({ target: { name: "contract_status",              value: "valid" } });
-      onChange({ target: { name: "probationary_period_months",   value: 6 } });
-      onChange({ target: { name: "probationary_evaluation_date", value: toDateInput(addMonths(hired, 6)) } });
+    if (PROBATION_TYPES.includes(value)) {
+      // Probationary / regular — no contract dates needed
+      const months   = Number(form.probationary_period_months) || 6;
+      const regDate  = toDateInput(addMonths(hired, 6));
+      const evalDate = toDateInput(addMonths(hired, months));
+
+      onChange({ target: { name: "regularization_date",          value: regDate  } });
+      onChange({ target: { name: "probationary_period_months",   value: months   } });
+      onChange({ target: { name: "probationary_evaluation_date", value: evalDate } });
+
+      // Clear contract date fields
+      onChange({ target: { name: "contract_date_from", value: ""      } });
+      onChange({ target: { name: "contract_date_to",   value: ""      } });
+      onChange({ target: { name: "contract_status",    value: "valid" } });
+
     } else {
-      // Non-probationary types: clear probation-specific fields
+      // Non-probationary: clear probation-specific fields, keep contract dates
       onChange({ target: { name: "regularization_date",          value: "" } });
       onChange({ target: { name: "probationary_period_months",   value: "" } });
       onChange({ target: { name: "probationary_evaluation_date", value: "" } });
-    }
 
-    // Seed contract date fields only for contract types
-    if (CONTRACT_TYPES.includes(value)) {
-      if (!form.contract_date_from) {
+      // Seed contract_date_from if not set
+      if (CONTRACT_TYPES.includes(value) && !form.contract_date_from) {
         onChange({ target: { name: "contract_date_from", value: todayInput() } });
       }
-      if (!form.contract_status) {
-        onChange({ target: { name: "contract_status", value: "valid" } });
+
+      // Derive contract_status from existing contract_date_to
+      const derived = deriveContractStatus(form.contract_date_to);
+      onChange({ target: { name: "contract_status", value: derived } });
+      if (derived === "expired") {
+        onChange({ target: { name: "status", value: "contract_end" } });
       }
     }
   };
@@ -127,12 +146,6 @@ export default function Step2EmploymentDetails({
   const handleContractEndDateChange = (e) => {
     const endDateStr = e.target.value;
     onChange(e);
-
-    if (!endDateStr) {
-      onChange({ target: { name: "contract_status", value: "valid" } });
-      onChange({ target: { name: "status",          value: "active" } });
-      return;
-    }
 
     const derived = deriveContractStatus(endDateStr);
     onChange({ target: { name: "contract_status", value: derived } });
@@ -155,7 +168,6 @@ export default function Step2EmploymentDetails({
       <div className="space-y-4">
         <SectionHeading title="Employment Classification" />
 
-        {/* 3-column: Employment Type | Status | Contract Status */}
         <div className="grid grid-cols-3 gap-4">
           <Field label="Employment Type" error={errors.employment_type}>
             <Select
@@ -190,7 +202,6 @@ export default function Step2EmploymentDetails({
             </Select>
           </Field>
 
-          {/* Contract Status — always visible */}
           <Field label="Contract Status" error={errors.contract_status}>
             <Select
               value={form.contract_status ?? ""}
@@ -212,10 +223,16 @@ export default function Step2EmploymentDetails({
       <div className="space-y-4">
         <SectionHeading
           title="Employment Dates"
-          description="Key dates for this employee's tenure."
+          description={
+            isProbationType
+              ? "Probationary/Regular: regularization and evaluation dates are derived automatically."
+              : !isRelieverType
+                ? "Contract types: contract start and end dates are required."
+                : undefined
+          }
         />
 
-        {/* Contract types: Hired + Contract Start + Contract End in one 3-column row */}
+        {/* Contract types: Hired + Contract Start + Contract End */}
         {isContractType && (
           <div className="grid grid-cols-3 gap-4">
             <Field label="Hired Date" error={errors.hired_date}>
@@ -227,7 +244,7 @@ export default function Step2EmploymentDetails({
                 className="!bg-white"
               />
             </Field>
-            <Field label="Contract Start Date" error={errors.contract_date_from}>
+            <Field label="Contract Start Date" required error={errors.contract_date_from}>
               <Input
                 name="contract_date_from"
                 type="date"
@@ -238,8 +255,9 @@ export default function Step2EmploymentDetails({
             </Field>
             <Field
               label="Contract End Date"
+              required
               error={errors.contract_date_to}
-              hint="Sets contract status and employee status automatically."
+              hint="Contract status updates automatically when this date passes."
             >
               <Input
                 name="contract_date_to"
@@ -268,8 +286,8 @@ export default function Step2EmploymentDetails({
           </div>
         )}
 
-        {/* Regular / Probationary / no type: Hired Date + Regularization Date */}
-        {!isContractType && !isRelieverType && (
+        {/* Probationary / Regular: Hired Date + Regularization Date */}
+        {isProbationType && (
           <div className="grid grid-cols-2 gap-4">
             <Field label="Hired Date" error={errors.hired_date}>
               <Input
@@ -280,24 +298,35 @@ export default function Step2EmploymentDetails({
                 className="!bg-white"
               />
             </Field>
+            <Field
+              label="Regularization Date"
+              error={errors.regularization_date}
+              hint="Auto-set to 6 months after hired date."
+            >
+              <Input
+                name="regularization_date"
+                type="date"
+                value={form.regularization_date ?? ""}
+                onChange={onChange}
+                className="!bg-white"
+              />
+            </Field>
+          </div>
+        )}
 
-            {isProbationType && (
-              <Field
-                label="Regularization Date"
-                error={errors.regularization_date}
-                hint="Auto-set to 6 months after hired date."
-              >
-                <Input
-                  name="regularization_date"
-                  type="date"
-                  value={form.regularization_date ?? ""}
-                  onChange={onChange}
-                  className="!bg-white"
-                />
-              </Field>
-            )}
-
-            {!hasType && <div />}
+        {/* No type selected */}
+        {!hasType && (
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Hired Date" error={errors.hired_date}>
+              <Input
+                name="hired_date"
+                type="date"
+                value={form.hired_date ?? ""}
+                onChange={handleHiredDateChange}
+                className="!bg-white"
+              />
+            </Field>
+            <div />
           </div>
         )}
       </div>
@@ -376,7 +405,7 @@ export default function Step2EmploymentDetails({
         </div>
       </div>
 
-      {/* ── Probationary — regular / probationary only ───────────── */}
+      {/* ── Probationary Details — regular / probationary only ───── */}
       {isProbationType && (
         <div className="space-y-4">
           <SectionHeading title="Probationary Details" />
@@ -384,7 +413,7 @@ export default function Step2EmploymentDetails({
             <Field
               label="Probationary Period (months)"
               error={errors.probationary_period_months}
-              hint="Evaluation date updates automatically."
+              hint="Default is 6 months. Evaluation date updates automatically."
             >
               <Input
                 name="probationary_period_months"

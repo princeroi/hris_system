@@ -41,7 +41,7 @@ function BirthDateCell({ value, onChange, error }) {
 
     if (editing) {
         return (
-            <div className="relative h-12">
+            <div className="relative h-11">
                 <input
                     type="date"
                     value={draft}
@@ -52,20 +52,20 @@ function BirthDateCell({ value, onChange, error }) {
                         if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); commit(); }
                         if (e.key === "Escape") { setDraft(value ?? ""); setEditing(false); }
                     }}
-                    className={`block w-full h-12 px-3 text-sm border-0 border-b-2 outline-none focus:ring-0 rounded-none ${
-                        error ? "bg-red-50 border-red-500"     :
-                        warn  ? "bg-amber-50 border-amber-400" :
-                                "bg-blue-50 border-blue-500"
+                    className={`block w-full h-11 px-3 text-[13px] text-slate-800 border-0 outline-none rounded-none bg-white ring-2 ring-inset transition-shadow ${
+                        error ? "ring-rose-400" :
+                        warn  ? "ring-amber-400" :
+                                "ring-indigo-400"
                     }`}
                 />
                 {age !== null && (
-                    <span className={`absolute right-2 top-1/2 -translate-y-1/2
-                                      px-1.5 py-px rounded-full text-[9px] font-bold pointer-events-none
+                    <span className={`absolute right-2.5 top-1/2 -translate-y-1/2
+                                      px-1.5 py-0.5 rounded text-[10px] font-semibold tabular-nums pointer-events-none
                                       ${warn
-                                          ? "bg-amber-100 text-amber-700 ring-1 ring-amber-300"
-                                          : "bg-blue-100 text-blue-700 ring-1 ring-blue-200"
+                                          ? "bg-amber-50 text-amber-700"
+                                          : "bg-indigo-50 text-indigo-700"
                                       }`}>
-                        {age}y {warn ? "⚠" : ""}
+                        {age}y
                     </span>
                 )}
             </div>
@@ -73,45 +73,45 @@ function BirthDateCell({ value, onChange, error }) {
     }
 
     return (
-        <div className="relative h-12 group">
+        <div className="relative h-11 group">
             <div
                 onClick={() => { setDraft(value ?? ""); setEditing(true); }}
-                className={`px-3 h-12 flex items-center text-sm cursor-pointer transition-colors ${
-                    error ? "hover:bg-red-50/60 text-slate-800"   :
-                    warn  ? "hover:bg-amber-50/60 text-slate-800" :
-                    value ? "hover:bg-blue-50/80 text-slate-800"  :
-                            "hover:bg-blue-50/80 text-slate-400 italic"
+                className={`px-3 h-11 flex items-center gap-2 text-[13px] cursor-pointer transition-colors ${
+                    error ? "hover:bg-rose-50/70 text-slate-700"   :
+                    warn  ? "hover:bg-amber-50/60 text-slate-700" :
+                    value ? "hover:bg-slate-50 text-slate-700"  :
+                            "hover:bg-slate-50 text-slate-300"
                 }`}
             >
-                <span className="truncate">{value || "click to edit"}</span>
+                <span className="truncate">{value || "—"}</span>
                 {age !== null && (
-                    <span className={`ml-auto shrink-0 px-1.5 py-px rounded-full text-[9px] font-bold
+                    <span className={`ml-auto shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold tabular-nums
                                       ${warn
-                                          ? "bg-amber-100 text-amber-700 ring-1 ring-amber-300"
+                                          ? "bg-amber-50 text-amber-700"
                                           : "bg-slate-100 text-slate-500"
                                       }`}>
-                        {age}y {warn ? "⚠" : ""}
+                        {age}y
                     </span>
                 )}
-                {error && <span className="ml-1 shrink-0 w-1.5 h-1.5 rounded-full bg-red-500" />}
+                {error && <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-rose-500" />}
             </div>
 
             {warn && !error && (
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-50
                                 hidden group-hover:flex items-center gap-1 px-2 py-1
-                                bg-amber-500 text-white text-[10px] font-medium rounded shadow-lg
+                                bg-amber-500 text-white text-[11px] font-medium rounded-md shadow-lg
                                 whitespace-nowrap pointer-events-none">
-                    Employee is under 18 years old
+                    Employee is under 18
                     <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-amber-500" />
                 </div>
             )}
             {error && (
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-50
                                 hidden group-hover:flex items-center gap-1 px-2 py-1
-                                bg-red-600 text-white text-[10px] font-medium rounded shadow-lg
+                                bg-slate-900 text-white text-[11px] font-medium rounded-md shadow-lg
                                 whitespace-nowrap pointer-events-none">
                     {error}
-                    <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-red-600" />
+                    <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900" />
                 </div>
             )}
         </div>

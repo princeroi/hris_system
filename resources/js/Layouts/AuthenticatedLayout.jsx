@@ -49,6 +49,7 @@ const CloseIcon = () => (
 const NAV_ITEMS = [
     { label: 'Dashboard',  routeName: 'dashboard',       icon: <HomeIcon /> },
     { label: 'Employees',  routeName: 'employees.index', icon: <EmployeesIcon /> },
+    { label: 'Archive Employees',  routeName: 'employees.archive_employees.index', icon: <EmployeesIcon /> },
 ];
 
 // ── Layout ─────────────────────────────────────────────────────────────────────
@@ -69,6 +70,11 @@ export default function AuthenticatedLayout({ header, children }) {
         <>
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700&display=swap');
+
+                html, body, #app {
+                    height: 100%;
+                    overflow: hidden;
+                }
 
                 *, *::before, *::after {
                     font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -96,9 +102,9 @@ export default function AuthenticatedLayout({ header, children }) {
                     --radius-md:     8px;
                 }
 
-                /* ── Sidebar scrollbar ── */
-                .sidebar-nav { scrollbar-width: none; }
-                .sidebar-nav::-webkit-scrollbar { display: none; }
+                /* ── Hide scrollbar but keep scrolling ── */
+                .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+                .no-scrollbar::-webkit-scrollbar { display: none; }
 
                 /* ── Nav items ── */
                 .nav-link {
@@ -212,7 +218,7 @@ export default function AuthenticatedLayout({ header, children }) {
 
             `}</style>
 
-            <div className="flex min-h-screen" style={{ background: 'var(--c-bg)' }}>
+            <div className="flex h-screen overflow-hidden" style={{ background: 'var(--c-bg)' }}>
 
                 {/* Mobile overlay */}
                 {sidebarOpen && (
@@ -226,7 +232,7 @@ export default function AuthenticatedLayout({ header, children }) {
                 {/* ── Sidebar ── */}
                 <aside
                     className={[
-                        'fixed inset-y-0 left-0 z-30 flex flex-col lg:static',
+                        'fixed inset-y-0 left-0 z-30 flex h-full flex-col lg:static lg:h-screen',
                         sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
                     ].join(' ')}
                     style={{
@@ -260,7 +266,7 @@ export default function AuthenticatedLayout({ header, children }) {
                     </div>
 
                     {/* Navigation */}
-                    <nav className="sidebar-nav flex-1 overflow-y-auto px-3 pt-5 pb-2">
+                    <nav className="no-scrollbar flex-1 overflow-y-auto px-3 pt-5 pb-2">
                         <span className="nav-group-label">Menu</span>
                         <div className="flex flex-col gap-0.5">
                             {NAV_ITEMS.map(({ label, routeName, icon }) => (
@@ -317,7 +323,7 @@ export default function AuthenticatedLayout({ header, children }) {
                 </aside>
 
                 {/* ── Main column ── */}
-                <div className="flex flex-1 flex-col min-w-0">
+                <div className="flex h-screen flex-1 flex-col min-w-0 overflow-hidden">
 
                     {/* Desktop topbar */}
                     <div
@@ -365,7 +371,7 @@ export default function AuthenticatedLayout({ header, children }) {
                     )}
 
                     {/* Page content */}
-                    <main className="flex-1 px-7 py-6">
+                    <main className="no-scrollbar flex-1 overflow-y-auto px-7 py-6">
                         {children}
                     </main>
                 </div>
