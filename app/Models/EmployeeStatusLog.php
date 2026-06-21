@@ -16,12 +16,16 @@ class EmployeeStatusLog extends Model
         'reason',
         'changed_by',
         'applied_at',
+        'is_processed',
+        'processed_at',
     ];
 
     protected $casts = [
         'effective_date'    => 'date',
         'last_working_date' => 'date',
         'applied_at'        => 'datetime',
+        'processed_at'      => 'datetime',
+        'is_processed'      => 'boolean',
     ];
 
     public function employee()
@@ -32,5 +36,12 @@ class EmployeeStatusLog extends Model
     public function changedBy()
     {
         return $this->belongsTo(User::class, 'changed_by');
+    }
+
+    public function scopePendingToday($query)
+    {
+        return $query
+            ->where('is_processed', false)
+            ->whereDate('effective_date', '<=', now()->toDateString());
     }
 }

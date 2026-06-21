@@ -4,9 +4,9 @@ namespace App\Services;
 
 use App\Models\Employee;
 use App\Models\EmployeeStatusLog;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use App\Models\Rehire;
 
 class EmployeeService
 {
@@ -87,8 +87,7 @@ class EmployeeService
             'first_name'      => $data['first_name'],
             'last_name'       => $data['last_name'],
             'middle_name'     => $data['middle_name'] ?? null,
-            'suffix'          => $data['suffix'] ?? null,
-            // 'status'          => $data['status'] ?? 'active',
+            'suffix'          => $data['suffix']       ?? null,
         ]);
 
         $employee->personalInfo()->create($this->personalInfoData($data));
@@ -119,8 +118,8 @@ class EmployeeService
             'first_name'      => $data['first_name'],
             'last_name'       => $data['last_name'],
             'middle_name'     => $data['middle_name'] ?? null,
-            'suffix'          => $data['suffix'] ?? null,
-            'status'          => $data['status'] ?? $employee->status,
+            'suffix'          => $data['suffix']       ?? null,
+            'status'          => $data['status']       ?? $employee->status,
         ]);
 
         $employee->personalInfo()->updateOrCreate(
@@ -150,7 +149,6 @@ class EmployeeService
 
         if (array_key_exists('work_experiences', $data)) {
             $employee->workExperience()->delete();
-
             foreach ($data['work_experiences'] as $entry) {
                 $employee->workExperience()->create($this->workExperienceData($entry));
             }
@@ -158,7 +156,6 @@ class EmployeeService
 
         if (array_key_exists('emergency_contacts', $data)) {
             $employee->emergencyContacts()->delete();
-
             foreach ($data['emergency_contacts'] as $entry) {
                 $employee->emergencyContacts()->create($this->emergencyContactData($entry));
             }
@@ -170,6 +167,73 @@ class EmployeeService
     public function delete(Employee $employee)
     {
         return $employee->delete();
+    }
+
+    public function changeStatus(Employee $employee, array $data): EmployeeStatusLog
+    {
+        if ($employee->employmentDetails?->status !== 'active') {
+            throw new \RuntimeException('Only active employees can have their status changed.');
+        }
+
+        return DB::transaction(function () use ($employee, $data) {
+            $previousStatus = $employee->employmentDetails?->status;
+            $effectiveDate  = $data['effective_date'];
+            $shouldApplyNow = Carbon::parse($effectiveDate)->startOfDay()->lte(now()->startOfDay());
+
+            if ($shouldApplyNow) {
+                $employee->employmentDetails()->updateOrCreate(
+                    ['employee_id' => $employee->id],
+                    ['status' => $data['new_status']]
+                );
+            }
+
+            return EmployeeStatusLog::create([
+                'employee_id'       => $employee->id,
+                'type'              => 'archive',
+                'previous_status'   => $previousStatus,
+                'new_status'        => $data['new_status'],
+                'effective_date'    => $effectiveDate,
+                'last_working_date' => $data['last_working_date'] ?? null,
+                'reason'            => $data['reason']            ?? null,
+                'changed_by'        => Auth::id(),
+                'applied_at'        => now(),
+                'is_processed'      => $shouldApplyNow,
+                'processed_at'      => $shouldApplyNow ? now() : null,
+            ]);
+        });
+    }
+
+    public function rehire(Employee $employee, array $data): EmployeeStatusLog
+    {
+        if ($employee->employmentDetails?->status === 'active') {
+            throw new \RuntimeException('Employee is already active.');
+        }
+
+        return DB::transaction(function () use ($employee, $data) {
+            $previousStatus = $employee->employmentDetails?->status;
+            $rehireDate     = $data['rehire_date'];
+            $shouldApplyNow = Carbon::parse($rehireDate)->startOfDay()->lte(now()->startOfDay());
+
+            if ($shouldApplyNow) {
+                $employee->employmentDetails()->updateOrCreate(
+                    ['employee_id' => $employee->id],
+                    ['status' => 'active']
+                );
+            }
+
+            return EmployeeStatusLog::create([
+                'employee_id'     => $employee->id,
+                'type'            => 'rehire',
+                'previous_status' => $previousStatus,
+                'new_status'      => 'active',
+                'effective_date'  => $rehireDate,
+                'reason'          => $data['reason'] ?? null,
+                'changed_by'      => Auth::id(),
+                'applied_at'      => now(),
+                'is_processed'    => $shouldApplyNow,
+                'processed_at'    => $shouldApplyNow ? now() : null,
+            ]);
+        });
     }
 
     private function personalInfoData(array $data): array
@@ -253,13 +317,13 @@ class EmployeeService
     {
         return [
             'work_time_factor_id' => $data['work_time_factor_id'] ?? null,
-            'monthly_rate'   => $data['monthly_rate']   ?? null,
-            'daily_rate'     => $data['daily_rate']     ?? null,
-            'hourly_rate'    => $data['hourly_rate']    ?? null,
-            'payroll_type'   => $data['payroll_type']   ?? null,
-            'salary_type'    => $data['salary_type']    ?? null,
-            'effective_date' => $data['effective_date'] ?? null,
-            'is_current'     => $data['is_current']     ?? true,
+            'monthly_rate'        => $data['monthly_rate']        ?? null,
+            'daily_rate'          => $data['daily_rate']          ?? null,
+            'hourly_rate'         => $data['hourly_rate']         ?? null,
+            'payroll_type'        => $data['payroll_type']        ?? null,
+            'salary_type'         => $data['salary_type']         ?? null,
+            'effective_date'      => $data['effective_date']      ?? null,
+            'is_current'          => $data['is_current']          ?? true,
         ];
     }
 
@@ -285,60 +349,5 @@ class EmployeeService
             'contact_person_telephone'    => $entry['contact_person_telephone']    ?? null,
             'contact_person_address'      => $entry['contact_person_address']      ?? null,
         ];
-    }
-
-    public function changeStatus(Employee $employee, array $data): EmployeeStatusLog
-    {
-        if ($employee->employmentDetails?->status !== 'active') {
-            throw new \RuntimeException('Only active employees can have their status changed.');
-        }
-
-        return DB::transaction(function () use ($employee, $data) {
-            $previousStatus = $employee->employmentDetails?->status;
-
-            $employee->employmentDetails()->updateOrCreate(
-                ['employee_id' => $employee->id],
-                ['status' => $data['new_status']]
-            );
-
-            return EmployeeStatusLog::create([
-                'employee_id'       => $employee->id,
-                'type'              => 'archive',
-                'previous_status'   => $previousStatus,
-                'new_status'        => $data['new_status'],
-                'effective_date'    => $data['effective_date'],
-                'last_working_date' => $data['last_working_date'] ?? null,
-                'reason'            => $data['reason'] ?? null,
-                'changed_by'        => Auth::id(),
-                'applied_at'        => now(),
-            ]);
-        });
-    }
-
-    public function rehire(Employee $employee, array $data): EmployeeStatusLog
-    {
-        if ($employee->employmentDetails?->status === 'active') {
-            throw new \RuntimeException('Employee is already active.');
-        }
-
-        return DB::transaction(function () use ($employee, $data) {
-            $previousStatus = $employee->employmentDetails?->status;
-
-            $employee->employmentDetails()->updateOrCreate(
-                ['employee_id' => $employee->id],
-                ['status' => 'active']
-            );
-
-            return EmployeeStatusLog::create([
-                'employee_id'     => $employee->id,
-                'type'            => 'rehire',
-                'previous_status' => $previousStatus,
-                'new_status'      => 'active',
-                'effective_date'  => $data['rehire_date'],
-                'reason'          => $data['reason'] ?? null,
-                'changed_by'      => Auth::id(),
-                'applied_at'      => now(),
-            ]);
-        });
     }
 }
