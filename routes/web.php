@@ -7,6 +7,12 @@ use Inertia\Inertia;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\EmployeeStatusController;
 use App\Http\Controllers\ArchiveEmployeeController;
+use App\Http\Controllers\EmployeeReassignmentController;
+use App\Http\Controllers\CompaniesController;
+use App\Http\Controllers\EmployeeOptionController;
+use App\Http\Controllers\CompanyBranchesController;
+use App\Http\Controllers\DepartmentsController;
+use App\Http\Controllers\PositionsController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -37,6 +43,21 @@ Route::middleware('auth')->group(function () {
     Route::patch('/employees/{employee}/rehire', [EmployeeStatusController::class, 'rehire'])
         ->name('employees.rehire');
 
+    Route::post('/employees/{employee}/reassign', [EmployeeReassignmentController::class, 'store'])
+        ->name('employees.reassign');
+
+    Route::resource('companies', CompaniesController::class);
+ 
+    Route::prefix('companies/{company}/branches')->name('companies.branches.')->group(function () {
+        Route::post('/',            [CompanyBranchesController::class, 'store'])->name('store');
+        Route::put('/{branch}',     [CompanyBranchesController::class, 'update'])->name('update');
+        Route::delete('/{branch}',  [CompanyBranchesController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::resource('options', EmployeeOptionController::class);
+
+    Route::resource('departments', DepartmentsController::class);
+    Route::resource('positions', PositionsController::class);
 });
 
 

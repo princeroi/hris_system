@@ -1,4 +1,3 @@
-// Index.jsx
 import { useState } from "react";
 import { router, Link, Head } from "@inertiajs/react";
 import { Upload, Plus, Users } from "lucide-react";
@@ -10,13 +9,15 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import Pagination from "@/Components/UI/Pagination";
 import SearchInput from "@/Components/UI/SearchInput";
 import ChangeStatusModal from "@/Components/Employees/ChangeStatusModal";
+import ReassignModal from "@/Components/Employees/ReassignModal";
 
 const ITEMS_PER_PAGE = 10;
 
-export default function Index({ employees, stats }) {
+export default function Index({ employees, stats, companies, branches, departments, positions }) {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [statusEmployee, setStatusEmployee] = useState(null);
+  const [reassignEmployee, setReassignEmployee] = useState(null);
 
   const filtered = searchEmployees(employees, search);
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
@@ -129,6 +130,7 @@ export default function Index({ employees, stats }) {
                 onShow={handleShow}
                 onDelete={handleDelete}
                 onChangeStatus={(employee) => setStatusEmployee(employee)}
+                onReassign={(employee) => setReassignEmployee(employee)}
               />
             </div>
 
@@ -161,6 +163,18 @@ export default function Index({ employees, stats }) {
           onClose={() => setStatusEmployee(null)}
         />
       )}
+
+      {reassignEmployee && (
+        <ReassignModal
+          employee={reassignEmployee}
+          companies={companies}
+          branches={branches}
+          departments={departments}
+          positions={positions}
+          onClose={() => setReassignEmployee(null)}
+        />
+      )}
+
     </AuthenticatedLayout>
   );
 }

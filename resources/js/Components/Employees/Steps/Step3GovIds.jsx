@@ -1,3 +1,5 @@
+// resources/js/Components/Employees/Steps/Step3GovIds.jsx
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -16,15 +18,17 @@ function SectionHeading({ title }) {
     );
 }
 
-function GovIdBlock({ label, numberField, statusField, remarksField, noValue, form, onChange, errors }) {
+// ← replace the old GovIdBlock with this one
+function GovIdBlock({ label, numberField, statusField, remarksField, noValue, form, onChange, errors, cellOptions = {} }) {
     const sel = (name) => (v) => onChange({ target: { name, value: v } });
 
-    // blank number → noValue (no_sss etc.); typing a number → for_verification
     const handleNumberChange = (e) => {
         onChange(e);
         const isEmpty = !e.target.value.trim();
         onChange({ target: { name: statusField, value: isEmpty ? noValue : "for_verification" } });
     };
+
+    const statusOptions = cellOptions[statusField] ?? [];
 
     return (
         <div className="grid grid-cols-3 gap-4 items-start">
@@ -47,14 +51,25 @@ function GovIdBlock({ label, numberField, statusField, remarksField, noValue, fo
                     Status
                     <span className="text-red-500 ml-0.5">*</span>
                 </Label>
-                <Select value={form[statusField] ?? "for_verification"} onValueChange={sel(statusField)}>
+                <Select value={form[statusField] ?? noValue} onValueChange={sel(statusField)}>
                     <SelectTrigger>
                         <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value={noValue}>No {label}</SelectItem>
-                        <SelectItem value="for_verification">For Verification</SelectItem>
-                        <SelectItem value="verified">Verified</SelectItem>
+                        {statusOptions.length > 0
+                            ? statusOptions.map(v => (
+                                <SelectItem key={v} value={v}>
+                                    {v.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                                </SelectItem>
+                            ))
+                            : (
+                                <>
+                                    <SelectItem value={noValue}>No {label}</SelectItem>
+                                    <SelectItem value="for_verification">For Verification</SelectItem>
+                                    <SelectItem value="verified">Verified</SelectItem>
+                                </>
+                            )
+                        }
                     </SelectContent>
                 </Select>
                 {errors[statusField] && (
@@ -83,7 +98,7 @@ const GOV_ID_FIELDS = [
     { label: "TIN",        numberField: "tin_number",        statusField: "tin_status",        remarksField: "tin_remarks",        noValue: "no_tin"        },
 ];
 
-export default function Step3GovIds({ form, onChange, errors = {} }) {
+export default function Step3GovIds({ form, onChange, errors = {}, cellOptions = {} }) {
     return (
         <div className="space-y-8">
             <div className="space-y-6">
@@ -95,6 +110,7 @@ export default function Step3GovIds({ form, onChange, errors = {} }) {
                         form={form}
                         onChange={onChange}
                         errors={errors}
+                        cellOptions={cellOptions}
                     />
                 ))}
             </div>

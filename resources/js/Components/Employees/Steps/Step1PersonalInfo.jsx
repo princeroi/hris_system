@@ -50,7 +50,9 @@ function Field({ label, required, error, children }) {
   );
 }
 
-export default function Step1PersonalInfo({ form, onChange, errors = {} }) {
+export default function Step1PersonalInfo({ form, onChange, errors = {}, cellOptions = {} }) {
+
+  const opts = (key) => cellOptions[key] ?? [];
 
   const handleBirthDateChange = (e) => {
     onChange(e);
@@ -153,8 +155,9 @@ export default function Step1PersonalInfo({ form, onChange, errors = {} }) {
             >
               <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="Male">Male</SelectItem>
-                <SelectItem value="Female">Female</SelectItem>
+                {opts("gender").map(v => (
+                  <SelectItem key={v} value={v}>{v}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </Field>
@@ -166,10 +169,9 @@ export default function Step1PersonalInfo({ form, onChange, errors = {} }) {
             >
               <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="Single">Single</SelectItem>
-                <SelectItem value="Married">Married</SelectItem>
-                <SelectItem value="Divorced">Divorced</SelectItem>
-                <SelectItem value="Widowed">Widowed</SelectItem>
+                {opts("civil_status").map(v => (
+                  <SelectItem key={v} value={v}>{v}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </Field>

@@ -45,7 +45,10 @@ export default function Step5Compensation({
     onBulkChange,
     errors = {},
     workTimeFactors = [],
+    cellOptions = {},
 }) {
+    const opts = (key)  => cellOptions[key] ?? [];
+
     const sel = (name) => (v) => onChange({ target: { name, value: v } });
 
     const selectedFactor = workTimeFactors.find(
@@ -145,48 +148,58 @@ export default function Step5Compensation({
                 </div>
             </div>
 
-            {/* ── Payroll Schedule ───────────────────────────────── */}
             <div className="space-y-4">
                 <SectionHeading title="Payroll Schedule" />
                 <div className="grid grid-cols-2 gap-4">
                     <Field label="Payroll Type" error={errors.payroll_type}>
-                        <Select
-                            value={form.payroll_type ?? ""}
-                            onValueChange={sel("payroll_type")}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select" />
-                            </SelectTrigger>
+                        <Select value={form.payroll_type ?? ""} onValueChange={sel("payroll_type")}>
+                            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="monthly">Monthly</SelectItem>
-                                <SelectItem value="semi_monthly">Semi-monthly</SelectItem>
-                                <SelectItem value="weekly">Weekly</SelectItem>
-                                <SelectItem value="daily">Daily</SelectItem>
-                                <SelectItem value="hourly">Hourly</SelectItem>
+                                {opts("payroll_type").length > 0
+                                    ? opts("payroll_type").map(v => (
+                                        <SelectItem key={v} value={v}>
+                                            {v.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                                        </SelectItem>
+                                    ))
+                                    : (
+                                        <>
+                                            <SelectItem value="monthly">Monthly</SelectItem>
+                                            <SelectItem value="semi_monthly">Semi-monthly</SelectItem>
+                                            <SelectItem value="weekly">Weekly</SelectItem>
+                                            <SelectItem value="daily">Daily</SelectItem>
+                                            <SelectItem value="hourly">Hourly</SelectItem>
+                                        </>
+                                    )
+                                }
                             </SelectContent>
                         </Select>
                     </Field>
 
                     <Field label="Salary Type" error={errors.salary_type}>
-                        <Select
-                            value={form.salary_type ?? ""}
-                            onValueChange={sel("salary_type")}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select" />
-                            </SelectTrigger>
+                        <Select value={form.salary_type ?? ""} onValueChange={sel("salary_type")}>
+                            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="hourly_rate">Hourly Rate</SelectItem>
-                                <SelectItem value="daily_rate">Daily Rate</SelectItem>
-                                <SelectItem value="weekly_rate">Weekly Rate</SelectItem>
-                                <SelectItem value="semi_monthly_rate">Semi-monthly Rate</SelectItem>
-                                <SelectItem value="monthly_rate">Monthly Rate</SelectItem>
+                                {opts("salary_type").length > 0
+                                    ? opts("salary_type").map(v => (
+                                        <SelectItem key={v} value={v}>
+                                            {v.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                                        </SelectItem>
+                                    ))
+                                    : (
+                                        <>
+                                            <SelectItem value="hourly_rate">Hourly Rate</SelectItem>
+                                            <SelectItem value="daily_rate">Daily Rate</SelectItem>
+                                            <SelectItem value="weekly_rate">Weekly Rate</SelectItem>
+                                            <SelectItem value="semi_monthly_rate">Semi-monthly Rate</SelectItem>
+                                            <SelectItem value="monthly_rate">Monthly Rate</SelectItem>
+                                        </>
+                                    )
+                                }
                             </SelectContent>
                         </Select>
                     </Field>
                 </div>
             </div>
-
         </div>
     );
 }

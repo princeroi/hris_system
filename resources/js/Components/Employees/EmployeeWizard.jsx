@@ -234,6 +234,7 @@ export default function EmployeeWizard({
     departments     = [],
     positions       = [],
     workTimeFactors = [],
+    cellOptions     = {},
 }) {
     const [step,    setStep]    = useState(1);
     const [form,    setForm]    = useState(initialData ? { ...emptyForm, ...initialData } : emptyForm);
@@ -357,6 +358,7 @@ export default function EmployeeWizard({
                     form={form}
                     onChange={handleChange}
                     errors={errors}
+                    cellOptions={cellOptions}
                 />
             );
             case 2: return (
@@ -368,6 +370,7 @@ export default function EmployeeWizard({
                     branches={branches}
                     departments={departments}
                     positions={positions}
+                    cellOptions={cellOptions}
                 />
             );
             case 3: return (
@@ -375,6 +378,7 @@ export default function EmployeeWizard({
                     form={form}
                     onChange={handleChange}
                     errors={errors}
+                    cellOptions={cellOptions}
                 />
             );
             case 4: return (
@@ -382,6 +386,7 @@ export default function EmployeeWizard({
                     form={form}
                     onChange={handleChange}
                     errors={errors}
+                    cellOptions={cellOptions}
                 />
             );
             case 5: return (
@@ -391,6 +396,7 @@ export default function EmployeeWizard({
                     onBulkChange={handleBulkChange}
                     errors={errors}
                     workTimeFactors={workTimeFactors}
+                    cellOptions={cellOptions}
                 />
             );
             case 6: return (

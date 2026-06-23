@@ -1,6 +1,9 @@
 // resources/js/Pages/Employees/bulkUploadConfig.js
 
-export const REQUIRED = ["employee_number", "first_name", "last_name"];
+export const REQUIRED = [
+    "employee_number", "first_name", "last_name",
+    "payroll_type", "salary_type",
+];
 
 export const DATE_KEYS = [
     "birth_date", "hired_date", "regularization_date",
@@ -13,21 +16,7 @@ export const NUM_KEYS = [
     "years_of_service",
 ];
 
-export const CELL_OPTIONS = {
-    gender:            ["Male", "Female"],
-    civil_status:      ["Single", "Married", "Divorced", "Widowed"],
-    employment_type:   ["probationary", "regular", "project_based", "contractual", "reliever", "part_time", "intern"],
-    status:            ["active", "inactive", "on_leave", "terminated", "resigned", "retired", "contract_end"],
-    contract_status:   ["valid", "expired", "renewed", "terminated"],
-    job_level:         ["Junior", "Mid-level", "Senior", "Lead", "Manager", "Director"],
-    sss_status:        ["for_verification", "verified", "no_sss"],
-    pagibig_status:    ["for_verification", "verified", "no_pagibig"],
-    philhealth_status: ["for_verification", "verified", "no_philhealth"],
-    tin_status:        ["for_verification", "verified", "no_tin"],
-    atm_status:        ["pending", "released", "active", "inactive"],
-    payroll_type:      ["monthly", "semi_monthly", "weekly", "daily", "hourly"],
-    salary_type:       ["monthly_rate", "semi_monthly_rate", "weekly_rate", "daily_rate", "hourly_rate"],
-};
+export const CELL_OPTIONS = {};
 
 export const FK_COLS = ["company_id", "branch_id", "department_id", "position_id"];
 
@@ -80,7 +69,6 @@ export const TABS = [
         id: "bank",
         label: "Bank",
         icon: "🏦",
-        // account_number removed; other_bank_* added
         cols: [
             "bank_name", "account_name", "atm_card_number", "atm_status",
             "gcash_account_number", "gcash_account_name",

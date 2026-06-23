@@ -100,6 +100,7 @@ export function parseRow(raw) {
  *   - Gov ID statuses (no_* when number blank, for_verification when number present)
  *   - ATM status (pending when blank)
  *   - is_current / is_active (always true)
+ *   - Branch-company integrity: if branch_id doesn't belong to company_id, clear it
  *   - Employment type rules:
  *       probationary / regular →
  *           - contract_date_from / contract_date_to are always cleared (not used)
@@ -110,8 +111,11 @@ export function parseRow(raw) {
  *       all others →
  *           - contract dates are optional; contract_status auto-derives from contract_date_to
  *           - probationary-specific fields are cleared
+ *
+ * @param {object} row      - The row data object
+ * @param {Array}  branches - Full branches list with company_id (passed from component)
  */
-export function applyRowDefaults(row) {
+export function applyRowDefaults(row, branches = []) {
     const r = { ...row };
 
     // ── is_current / is_active always true ───────────────────────────────────
@@ -140,6 +144,20 @@ export function applyRowDefaults(row) {
     // ── ATM status default ────────────────────────────────────────────────────
     if (isBlank(r.atm_status) || String(r.atm_status).trim() === "") {
         r.atm_status = "pending";
+    }
+
+    // ── Branch-company integrity ──────────────────────────────────────────────
+    // If a branch_id is set but doesn't belong to the selected company_id, clear it.
+    // This guards against stale Excel imports or manual edits.
+    if (!isBlank(r.branch_id) && !isBlank(r.company_id) && branches.length > 0) {
+        const branchBelongs = branches.some(
+            b =>
+                String(b.id) === String(r.branch_id) &&
+                String(b.company_id) === String(r.company_id)
+        );
+        if (!branchBelongs) {
+            r.branch_id = "";
+        }
     }
 
     // ── Employment type rules ─────────────────────────────────────────────────
@@ -189,12 +207,21 @@ export function applyRowDefaults(row) {
 }
 
 // ── Row validator ─────────────────────────────────────────────────────────────
+/**
+ * @param {object}  row
+ * @param {Array}   allRows
+ * @param {number}  currentIndex
+ * @param {Set}     existingNumbers
+ * @param {object}  fkOptions        - already filtered per-row (branch_id filtered by company)
+ * @param {Array}   branches         - full branches list with company_id, used for mismatch message
+ */
 export function validateRow(
     row,
     allRows,
     currentIndex,
     existingNumbers = new Set(),
-    fkOptions       = {}
+    fkOptions       = {},
+    branches        = []
 ) {
     const fieldErrors = {};
     const rowErrors   = [];
@@ -240,11 +267,21 @@ export function validateRow(
         else if (age > 150)         addField("age", "Age must be 150 or less");
     }
 
-    if (!isBlank(row.gender) && !["Male", "Female"].includes(row.gender))
-        addField("gender", "Gender must be Male or Female");
+    if (!isBlank(row.gender) && !["Male", "Female"].includes(row.gender)) {
+        const allowed = CELL_OPTIONS["gender"];
+        if (allowed?.length > 0 && !allowed.includes(row.gender))
+            addField("gender", "Gender must be Male or Female");
+        else if (!allowed?.length && !["Male", "Female"].includes(row.gender))
+            addField("gender", "Gender must be Male or Female");
+    }
 
-    if (!isBlank(row.civil_status) && !["Single", "Married", "Divorced", "Widowed"].includes(row.civil_status))
-        addField("civil_status", "Invalid civil status");
+    if (!isBlank(row.civil_status)) {
+        const allowed = CELL_OPTIONS["civil_status"];
+        const defaults = ["Single", "Married", "Divorced", "Widowed"];
+        const list = allowed?.length ? allowed : defaults;
+        if (!list.includes(row.civil_status))
+            addField("civil_status", `Invalid civil status. Allowed: ${list.join(", ")}`);
+    }
 
     if (!isBlank(row.nationality) && String(row.nationality).length > 100)
         addField("nationality", "Nationality must be 100 characters or less");
@@ -327,51 +364,39 @@ export function validateRow(
     // ── Gov IDs ───────────────────────────────────────────────────────────────
     const GOV_ID_FIELDS = [
         {
-            num:     "sss_number",
-            status:  "sss_status",
-            label:   "SSS",
-            allowed: ["no_sss", "for_verification", "verified"],
-            regex:   /^\d{2}-?\d{7}-?\d{1}$|^\d{10}$/,
-            hint:    "XX-XXXXXXX-X (10 digits)",
+            num: "sss_number", status: "sss_status", label: "SSS",
+            allowed: () => CELL_OPTIONS["sss_status"]?.length ? CELL_OPTIONS["sss_status"] : ["no_sss", "for_verification", "verified"],
+            regex: /^\d{2}-?\d{7}-?\d{1}$|^\d{10}$/, hint: "XX-XXXXXXX-X (10 digits)",
         },
         {
-            num:     "pagibig_number",
-            status:  "pagibig_status",
-            label:   "Pag-IBIG",
-            allowed: ["no_pagibig", "for_verification", "verified"],
-            regex:   /^\d{4}-?\d{4}-?\d{4}$|^\d{12}$/,
-            hint:    "XXXX-XXXX-XXXX (12 digits)",
+            num: "pagibig_number", status: "pagibig_status", label: "Pag-IBIG",
+            allowed: () => CELL_OPTIONS["pagibig_status"]?.length ? CELL_OPTIONS["pagibig_status"] : ["no_pagibig", "for_verification", "verified"],
+            regex: /^\d{4}-?\d{4}-?\d{4}$|^\d{12}$/, hint: "XXXX-XXXX-XXXX (12 digits)",
         },
         {
-            num:     "philhealth_number",
-            status:  "philhealth_status",
-            label:   "PhilHealth",
-            allowed: ["no_philhealth", "for_verification", "verified"],
-            regex:   /^\d{2}-?\d{9}-?\d{1}$|^\d{12}$/,
-            hint:    "XX-XXXXXXXXX-X (12 digits)",
+            num: "philhealth_number", status: "philhealth_status", label: "PhilHealth",
+            allowed: () => CELL_OPTIONS["philhealth_status"]?.length ? CELL_OPTIONS["philhealth_status"] : ["no_philhealth", "for_verification", "verified"],
+            regex: /^\d{2}-?\d{9}-?\d{1}$|^\d{12}$/, hint: "XX-XXXXXXXXX-X (12 digits)",
         },
         {
-            num:     "tin_number",
-            status:  "tin_status",
-            label:   "TIN",
-            allowed: ["no_tin", "for_verification", "verified"],
-            regex:   /^\d{3}-?\d{3}-?\d{3}$|^\d{3}-?\d{3}-?\d{3}-?\d{3}$|^\d{9}$|^\d{12}$/,
-            hint:    "XXX-XXX-XXX (9 digits) or XXX-XXX-XXX-XXX (12 digits)",
+            num: "tin_number", status: "tin_status", label: "TIN",
+            allowed: () => CELL_OPTIONS["tin_status"]?.length ? CELL_OPTIONS["tin_status"] : ["no_tin", "for_verification", "verified"],
+            regex: /^\d{3}-?\d{3}-?\d{3}$|^\d{3}-?\d{3}-?\d{3}-?\d{3}$|^\d{9}$|^\d{12}$/, hint: "XXX-XXX-XXX (9 digits) or XXX-XXX-XXX-XXX (12 digits)",
         },
     ];
 
     GOV_ID_FIELDS.forEach(({ num, status, label, allowed, regex, hint }) => {
+        const allowedList = allowed();
         if (!isBlank(row[num])) {
             const val = String(row[num]).trim();
             if (!regex.test(val))
                 addField(num, `Invalid ${label} format — expected ${hint}`);
         }
-        if (!isBlank(row[status]) && !allowed.includes(String(row[status])))
-            addField(status, `Invalid ${label} status. Allowed: ${allowed.join(", ")}`);
+        if (!isBlank(row[status]) && !allowedList.includes(String(row[status])))
+            addField(status, `Invalid ${label} status. Allowed: ${allowedList.join(", ")}`);
     });
 
     // ── Bank Account ──────────────────────────────────────────────────────────
-    // account_number removed from bank; ATM card number is the primary account ref
     const BANK_FIELDS_255 = [
         "bank_name", "account_name", "atm_card_number",
         "gcash_account_number", "gcash_account_name",
@@ -389,8 +414,13 @@ export function validateRow(
             addField(f, `${colLabel(f)} must contain numbers only`);
     });
 
-    if (!isBlank(row.atm_status) && !["pending", "released", "active", "inactive"].includes(String(row.atm_status)))
-        addField("atm_status", "Invalid ATM status. Allowed: pending, released, active, inactive");
+    if (!isBlank(row.atm_status)) {
+        const allowed  = CELL_OPTIONS["atm_status"];
+        const defaults = ["pending", "released", "active", "inactive"];
+        const list     = allowed?.length ? allowed : defaults;
+        if (!list.includes(String(row.atm_status)))
+            addField("atm_status", `Invalid ATM status. Allowed: ${list.join(", ")}`);
+    }
 
     // ── Compensation ──────────────────────────────────────────────────────────
     ["monthly_rate", "daily_rate", "hourly_rate"].forEach(k => {
@@ -401,13 +431,23 @@ export function validateRow(
         }
     });
 
-    const PAYROLL_TYPES = ["monthly", "semi_monthly", "weekly", "daily", "hourly"];
-    if (!isBlank(row.payroll_type) && !PAYROLL_TYPES.includes(String(row.payroll_type)))
-        addField("payroll_type", `Invalid payroll type. Allowed: ${PAYROLL_TYPES.join(", ")}`);
+    // Only validate format when a non-blank value is present.
+    // The "required" error for blank values is handled by the REQUIRED loop above.
+    if (!isBlank(row.payroll_type)) {
+        const list = CELL_OPTIONS["payroll_type"]?.length
+            ? CELL_OPTIONS["payroll_type"]
+            : ["monthly", "semi_monthly", "weekly", "daily", "hourly"];
+        if (!list.includes(String(row.payroll_type)))
+            addField("payroll_type", `Invalid payroll type. Allowed: ${list.join(", ")}`);
+    }
 
-    const SALARY_TYPES = ["hourly_rate", "daily_rate", "weekly_rate", "semi_monthly_rate", "monthly_rate"];
-    if (!isBlank(row.salary_type) && !SALARY_TYPES.includes(String(row.salary_type)))
-        addField("salary_type", `Invalid salary type. Allowed: ${SALARY_TYPES.join(", ")}`);
+    if (!isBlank(row.salary_type)) {
+        const list = CELL_OPTIONS["salary_type"]?.length
+            ? CELL_OPTIONS["salary_type"]
+            : ["hourly_rate", "daily_rate", "weekly_rate", "semi_monthly_rate", "monthly_rate"];
+        if (!list.includes(String(row.salary_type)))
+            addField("salary_type", `Invalid salary type. Allowed: ${list.join(", ")}`);
+    }
 
     if (!isBlank(row.effective_date) && !isDate(row.effective_date))
         addField("effective_date", "Please enter a valid effective date");
@@ -415,16 +455,44 @@ export function validateRow(
     // ── CELL_OPTIONS enum validation ──────────────────────────────────────────
     Object.entries(CELL_OPTIONS).forEach(([col, allowed]) => {
         if (isBlank(row[col])) return;
-        if (["gender", "civil_status", "atm_status",
-             "sss_status", "pagibig_status", "philhealth_status", "tin_status",
-             "payroll_type", "salary_type"].includes(col)) return;
-        if (!allowed.includes(String(row[col])))
+        if (!Array.isArray(allowed) || allowed.length === 0) return;
+
+        // These are validated separately with specific logic above — skip here
+        if ([
+            "gender", "civil_status", "atm_status",
+            "sss_status", "pagibig_status", "philhealth_status", "tin_status",
+            "payroll_type", "salary_type",
+        ].includes(col)) return;
+
+        if (!allowed.includes(String(row[col]))) {
             addField(col, `"${row[col]}" is not a valid option. Allowed: ${allowed.join(", ")}`);
+        }
     });
 
     // ── FK column validation ──────────────────────────────────────────────────
     FK_COLS.forEach(col => {
         if (isBlank(row[col])) return;
+
+        if (col === "branch_id") {
+            if (isBlank(row.company_id)) return;
+
+            const filteredOptions = fkOptions["branch_id"] ?? [];
+
+            if (!filteredOptions.some(opt => String(opt.value) === String(row[col]))) {
+                const existsElsewhere = branches.some(
+                    b => String(b.id) === String(row[col]) &&
+                         String(b.company_id) !== String(row.company_id)
+                );
+
+                if (existsElsewhere) {
+                    addField(col, "Selected branch does not belong to the selected company");
+                } else {
+                    addField(col, "Selected branch does not exist in the system");
+                }
+            }
+            return;
+        }
+
         const options = fkOptions[col] ?? [];
         if (options.length === 0) return;
         if (!options.some(opt => String(opt.value) === String(row[col])))
@@ -481,8 +549,6 @@ export function validateRow(
         if (isDate(exp.start_date) && isDate(exp.end_date) &&
             parseD(exp.end_date) < parseD(exp.start_date))
             addField(prefix + ".end_date", `Entry ${ei + 1}: End date must be on or after the start date`);
-
-        // years_of_service is auto-computed — no manual validation needed
     });
 
     // ── Emergency contact sub-row validation ──────────────────────────────────
@@ -545,12 +611,12 @@ export const emptyRow = () => ({
     probationary_period_months: 6, probationary_evaluation_date: "",
 
     // Gov IDs
-    sss_number: "",        sss_status: "no_sss",         sss_remarks: "",
-    pagibig_number: "",    pagibig_status: "no_pagibig",  pagibig_remarks: "",
+    sss_number: "",        sss_status: "no_sss",             sss_remarks: "",
+    pagibig_number: "",    pagibig_status: "no_pagibig",      pagibig_remarks: "",
     philhealth_number: "", philhealth_status: "no_philhealth", philhealth_remarks: "",
-    tin_number: "",        tin_status: "no_tin",          tin_remarks: "",
+    tin_number: "",        tin_status: "no_tin",              tin_remarks: "",
 
-    // Bank — account_number removed; other_bank_* added
+    // Bank
     bank_name: "", account_name: "", atm_card_number: "",
     atm_status: "pending",
     gcash_account_number: "", gcash_account_name: "",

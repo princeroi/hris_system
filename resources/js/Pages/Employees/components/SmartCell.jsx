@@ -119,7 +119,7 @@ function BirthDateCell({ value, onChange, error }) {
 }
 
 // ── Main SmartCell ────────────────────────────────────────────────────────────
-export default function SmartCell({ col, value, onChange, fkOptions, error }) {
+export default function SmartCell({ col, value, onChange, fkOptions, cellOptions = {}, error }) {
     if (GOV_ID_COLS.includes(col)) {
         return <GovIdCell col={col} value={value} onChange={onChange} error={error} />;
     }
@@ -128,8 +128,9 @@ export default function SmartCell({ col, value, onChange, fkOptions, error }) {
         return <SelectCell value={value} options={fkOptions?.[col] ?? []} onChange={onChange} error={error} />;
     }
 
-    if (CELL_OPTIONS[col]) {
-        const options = CELL_OPTIONS[col].map(v => ({ value: v, label: v.replace(/_/g, " ") }));
+    // ← Use the passed-in cellOptions instead of the imported CELL_OPTIONS
+    if (cellOptions[col]) {
+        const options = cellOptions[col].map(v => ({ value: v, label: v.replace(/_/g, " ") }));
         return <SelectCell value={value} options={options} onChange={onChange} error={error} />;
     }
 

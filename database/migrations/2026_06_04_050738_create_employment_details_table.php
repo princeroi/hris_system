@@ -19,29 +19,9 @@ return new class extends Migration
 
             $table->date('contract_date_from')->nullable();
             $table->date('contract_date_to')->nullable();
-            $table->enum('contract_status', [
-                'no_contract', 
-                'valid', 
-                'expired'
-                ])->nullable();
-            $table->enum('employment_type', [
-                'probationary', 
-                'regular', 
-                'project_based', 
-                'contractual', 
-                'reliever', 
-                'part_time', 
-                'intern',
-                ])->nullable();
-            $table->enum('status', [
-                'active', 
-                'inactive', 
-                'on_leave',
-                'terminated',
-                'resigned',
-                'retired',
-                'contract_end'
-            ])->nullable();
+            $table->string('contract_status')->nullable();
+            $table->string('employment_type')->nullable();
+            $table->string('status')->nullable();
             $table->foreignId('company_id')->nullable()->constrained('companies')->onDelete('set null');
             $table->foreignId('branch_id')->nullable()->constrained('company_branches')->onDelete('set null');
             $table->foreignId('department_id')->nullable()->constrained('departments')->onDelete('set null');

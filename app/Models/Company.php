@@ -23,7 +23,7 @@ class Company extends Model
         return $this->hasMany(EmploymentDetails::class, 'company_id');
     }
 
-    public function branch() : HasMany
+    public function branches() : HasMany
     {
         return $this->hasMany(CompanyBranch::class, 'company_id');
     }

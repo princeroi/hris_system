@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('account_number')->nullable();
             $table->string('account_name')->nullable();
             $table->string('atm_card_number')->nullable();
-            $table->enum('atm_status', ['pending', 'released', 'active', 'inactive'])->default('active');
+            $table->string('atm_status')->default('active');
 
             $table->string('gcash_account_number')->nullable();
             $table->string('gcash_account_name')->nullable();

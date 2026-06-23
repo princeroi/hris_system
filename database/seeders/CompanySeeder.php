@@ -13,7 +13,7 @@ class CompanySeeder extends Seeder
             ['company_name' => 'Acme Corporation',       'is_active' => true],
             ['company_name' => 'Bright Solutions Inc.',  'is_active' => true],
             ['company_name' => 'Sunrise Enterprises',    'is_active' => true],
-            ['company_name' => 'Metro Holdings Co.',     'is_active' => false],
+            ['company_name' => 'Metro Holdings Co.',     'is_active' => true],
         ];
 
         foreach ($companies as $company) {

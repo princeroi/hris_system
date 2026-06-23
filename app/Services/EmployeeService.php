@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Employee;
 use App\Models\EmployeeStatusLog;
+use App\Models\EmployeeReassignmentLog;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -233,6 +234,118 @@ class EmployeeService
                 'is_processed'    => $shouldApplyNow,
                 'processed_at'    => $shouldApplyNow ? now() : null,
             ]);
+        });
+    }
+
+    public function reassign(Employee $employee, array $data): EmployeeReassignmentLog
+    {
+        return DB::transaction(function () use ($employee, $data) {
+            $ed = $employee->employmentDetails;
+ 
+            // ── Snapshot previous values ───────────────────────────────────────
+            $prev = [
+                'prev_company_id'                    => $ed?->company_id,
+                'prev_branch_id'                     => $ed?->branch_id,
+                'prev_department_id'                 => $ed?->department_id,
+                'prev_position_id'                   => $ed?->position_id,
+                'prev_employment_type'               => $ed?->employment_type,
+                'prev_contract_status'               => $ed?->contract_status,
+                'prev_contract_date_from'            => $ed?->contract_date_from,
+                'prev_contract_date_to'              => $ed?->contract_date_to,
+                'prev_regularization_date'           => $ed?->regularization_date,
+                'prev_probationary_period_months'    => $ed?->probationary_period_months,
+                'prev_probationary_evaluation_date'  => $ed?->probationary_evaluation_date,
+            ];
+ 
+            $effectiveDate  = $data['effective_date'];
+            $newType        = $data['employment_type'] ?? $ed?->employment_type;
+            $isRegularLike  = in_array($newType, ['regular', 'probationary'], true);
+            $isProbationary = $newType === 'probationary';
+            $typeChanged    = isset($data['employment_type'])
+                              && $data['employment_type'] !== $ed?->employment_type;
+ 
+            // ── Build the update payload ───────────────────────────────────────
+            $updates = [];
+ 
+            // Placement fields — apply whatever was sent
+            foreach (['company_id', 'branch_id', 'department_id', 'position_id'] as $f) {
+                if (array_key_exists($f, $data)) {
+                    $updates[$f] = $data[$f];
+                }
+            }
+ 
+            // Employment type itself
+            if ($typeChanged) {
+                $updates['employment_type'] = $newType;
+            }
+ 
+            // Contract status — sent for all types when type changes
+            if (array_key_exists('contract_status', $data)) {
+                $updates['contract_status'] = $data['contract_status'];
+            }
+ 
+            if ($typeChanged) {
+                if ($isRegularLike) {
+                    // ── Regular / Probationary ─────────────────────────────────
+                    // Accept regularization date
+                    $updates['regularization_date'] = $data['regularization_date'] ?? null;
+ 
+                    // Always blank out contract date range
+                    $updates['contract_date_from'] = null;
+                    $updates['contract_date_to']   = null;
+ 
+                    if ($isProbationary) {
+                        // Accept probationary fields
+                        $updates['probationary_period_months']   = $data['probationary_period_months']   ?? null;
+                        $updates['probationary_evaluation_date'] = $data['probationary_evaluation_date'] ?? null;
+                    } else {
+                        // Regular → blank out probationary fields
+                        $updates['probationary_period_months']   = null;
+                        $updates['probationary_evaluation_date'] = null;
+                    }
+                } else {
+                    // ── Other types (contractual, project_based, etc.) ─────────
+                    // Accept contract date range
+                    $updates['contract_date_from'] = $data['contract_date_from'] ?? null;
+                    $updates['contract_date_to']   = $data['contract_date_to']   ?? null;
+ 
+                    // Always blank out regularization / probationary fields
+                    $updates['regularization_date']           = null;
+                    $updates['probationary_period_months']    = null;
+                    $updates['probationary_evaluation_date']  = null;
+                }
+            }
+ 
+            // ── Apply immediately or let the job handle it ─────────────────────
+            $shouldApplyNow = Carbon::parse($effectiveDate)->startOfDay()->lte(now()->startOfDay());
+ 
+            if ($shouldApplyNow && !empty($updates)) {
+                $employee->employmentDetails()->updateOrCreate(
+                    ['employee_id' => $employee->id],
+                    $updates
+                );
+            }
+ 
+            // ── Log ────────────────────────────────────────────────────────────
+            return EmployeeReassignmentLog::create(array_merge($prev, [
+                'employee_id'                       => $employee->id,
+                'new_company_id'                    => $updates['company_id']                    ?? $ed?->company_id,
+                'new_branch_id'                     => $updates['branch_id']                     ?? $ed?->branch_id,
+                'new_department_id'                 => $updates['department_id']                 ?? $ed?->department_id,
+                'new_position_id'                   => $updates['position_id']                   ?? $ed?->position_id,
+                'new_employment_type'               => $updates['employment_type']               ?? $ed?->employment_type,
+                'new_contract_status'               => $updates['contract_status']               ?? $ed?->contract_status,
+                'new_contract_date_from'            => $updates['contract_date_from']            ?? $ed?->contract_date_from,
+                'new_contract_date_to'              => $updates['contract_date_to']              ?? $ed?->contract_date_to,
+                'new_regularization_date'           => $updates['regularization_date']           ?? $ed?->regularization_date,
+                'new_probationary_period_months'    => $updates['probationary_period_months']    ?? $ed?->probationary_period_months,
+                'new_probationary_evaluation_date'  => $updates['probationary_evaluation_date']  ?? $ed?->probationary_evaluation_date,
+                'effective_date'                    => $effectiveDate,
+                'reason'                            => $data['reason']                           ?? null,
+                'changed_by'                        => Auth::id(),
+                'is_processed'                      => $shouldApplyNow,
+                'processed_at'                      => $shouldApplyNow ? now() : null,
+            ]));
         });
     }
 

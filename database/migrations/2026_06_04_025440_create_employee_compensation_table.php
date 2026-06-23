@@ -18,21 +18,9 @@ return new class extends Migration
             $table->decimal('daily_rate', 15, 2)->nullable();
             $table->decimal('hourly_rate', 15, 2)->nullable();
 
-            $table->enum('payroll_type', [
-                'monthly',
-                'semi_monthly',
-                'weekly',
-                'daily',
-                'hourly'
-            ])->nullable();
+            $table->string('payroll_type')->nullable();
 
-            $table->enum('salary_type', [
-                'hourly_rate',
-                'daily_rate',
-                'weekly_rate',
-                'semi_monthly_rate',
-                'monthly_rate',
-            ])->nullable();
+            $table->string('salary_type')->nullable();
             $table->date('effective_date')->nullable();
 
             $table->boolean('is_current')->default(true);

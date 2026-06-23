@@ -15,6 +15,7 @@ use App\Models\EmploymentDetails;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\EmployeeStatusLog;
+use App\Models\EmployeeOptionGroup;
 
 class EmployeeController extends Controller
 {
@@ -23,6 +24,17 @@ class EmployeeController extends Controller
     public function __construct(EmployeeService $service)
     {
         $this->service = $service;
+    }
+
+    private function cellOptions(): array
+    {
+        return \DB::table('option_groups')
+            ->join('options', 'option_groups.id', '=', 'options.group_id')
+            ->select('option_groups.group', 'options.value')
+            ->get()
+            ->groupBy('group')
+            ->map(fn($items) => $items->pluck('value')->toArray())
+            ->toArray();
     }
 
     public function index()
@@ -40,6 +52,11 @@ class EmployeeController extends Controller
                     'position_name'   => $ed['position']['position_name'] ?? null,
                     'company_name'    => $ed['company']['company_name'] ?? null,
                     'branch_name'     => $ed['branch']['branch_name'] ?? null,
+
+                    'company_id'      => $ed['company_id'] ?? null,
+                    'branch_id'       => $ed['branch_id'] ?? null,
+                    'department_id'   => $ed['department_id'] ?? null,
+                    'position_id'     => $ed['position_id'] ?? null,
                 ]);
             }
 
@@ -69,22 +86,22 @@ class EmployeeController extends Controller
         return Inertia::render('Employees/Index', [
             'employees' => $employees,
             'stats' => $stats,
+            'companies'   => Company::all(['id', 'company_name']),
+            'branches'    => CompanyBranch::all(['id', 'branch_name']),
+            'departments' => Department::all(['id', 'department_name']),
+            'positions'   => Position::all(['id', 'position_name']),
         ]);
     }
 
     public function create()
     {
         return Inertia::render('Employees/Create', [
-            'companies'   => Company::all(['id', 'company_name']),
-            'branches'    => CompanyBranch::all(['id', 'branch_name']),
-            'departments' => Department::all(['id', 'department_name']),
-            'positions'   => Position::all(['id', 'position_name']),
-            'workTimeFactors' => WorkTimeFactor::all([
-                'id',
-                'factor_name',
-                'working_days_per_month',
-                'working_hours_per_day',
-            ]),
+            'companies'       => Company::select('id', 'company_name')->get(),
+            'branches'        => CompanyBranch::select('id', 'branch_name', 'company_id')->get(),
+            'departments'     => Department::select('id', 'department_name')->get(),
+            'positions'       => Position::select('id', 'position_name')->get(),
+            'workTimeFactors' => WorkTimeFactor::select('id', 'factor_name', 'working_days_per_month', 'working_hours_per_day')->get(),
+            'cellOptions' => $this->cellOptions(),
         ]);
     }
 
@@ -136,16 +153,12 @@ class EmployeeController extends Controller
         $data = $this->service->find($employee->id);
 
         return Inertia::render('Employees/Edit', array_merge($data, [
-            'companies'   => Company::all(['id', 'company_name']),
-            'branches'    => CompanyBranch::all(['id', 'branch_name']),
-            'departments' => Department::all(['id', 'department_name']),
-            'positions'   => Position::all(['id', 'position_name']),
-            'workTimeFactors' => WorkTimeFactor::all([
-                'id',
-                'factor_name',
-                'working_days_per_month',
-                'working_hours_per_day',
-            ]),
+            'companies'       => Company::select('id', 'company_name')->get(),
+            'branches'        => CompanyBranch::select('id', 'branch_name', 'company_id')->get(),
+            'departments'     => Department::select('id', 'department_name')->get(),
+            'positions'       => Position::select('id', 'position_name')->get(),
+            'workTimeFactors' => WorkTimeFactor::select('id', 'factor_name', 'working_days_per_month', 'working_hours_per_day')->get(),
+            'cellOptions' => $this->cellOptions(),
         ]));
     }
 
@@ -170,17 +183,13 @@ class EmployeeController extends Controller
     public function bulkUpload()
     {
         return Inertia::render('Employees/BulkUpload', [
-            'companies'   => Company::all(['id', 'company_name']),
-            'branches'    => CompanyBranch::all(['id', 'branch_name']),
-            'departments' => Department::all(['id', 'department_name']),
-            'positions'   => Position::all(['id', 'position_name']),
+            'companies'               => Company::select('id', 'company_name')->get(),
+            'branches'                => CompanyBranch::select('id', 'branch_name', 'company_id')->get(),
+            'departments'             => Department::select('id', 'department_name')->get(),
+            'positions'               => Position::select('id', 'position_name')->get(),
             'existingEmployeeNumbers' => Employee::pluck('employee_number'),
-            'workTimeFactors' => WorkTimeFactor::all([
-                'id',
-                'factor_name',
-                'working_days_per_month',
-                'working_hours_per_day',
-            ]),
+            'workTimeFactors'         => WorkTimeFactor::select('id', 'factor_name', 'working_days_per_month', 'working_hours_per_day')->get(),
+            'cellOptions' => $this->cellOptions(),
         ]);
     }
 

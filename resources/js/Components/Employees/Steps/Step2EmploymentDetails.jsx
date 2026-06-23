@@ -48,12 +48,6 @@ function todayInput() {
   return toDateInput(new Date());
 }
 
-/**
- * Derives contract_status from contract_date_to:
- *   - blank          → "valid"
- *   - past (< today) → "expired"
- *   - today or future → "valid"
- */
 function deriveContractStatus(endDateStr) {
   if (!endDateStr) return "valid";
   const end   = new Date(endDateStr);
@@ -63,7 +57,6 @@ function deriveContractStatus(endDateStr) {
   return end < today ? "expired" : "valid";
 }
 
-// Employment types that use contract dates instead of regularization
 const CONTRACT_TYPES  = ["contractual", "project_based", "part_time", "intern"];
 const RELIEVER_TYPE   = "reliever";
 const PROBATION_TYPES = ["probationary", "regular"];
@@ -71,13 +64,32 @@ const PROBATION_TYPES = ["probationary", "regular"];
 export default function Step2EmploymentDetails({
   form, onChange, errors = {},
   companies = [], branches = [], departments = [], positions = [],
+  cellOptions = {},
 }) {
+
+  const opts = (key) => cellOptions[key] ?? [];
+  
   const sel = (name) => (v) => onChange({ target: { name, value: v } });
 
   const isContractType  = CONTRACT_TYPES.includes(form.employment_type);
   const isRelieverType  = form.employment_type === RELIEVER_TYPE;
   const isProbationType = PROBATION_TYPES.includes(form.employment_type);
   const hasType         = !!form.employment_type;
+
+  // ── Filter branches by selected company ───────────────────────────────────
+  // Each branch now has a company_id from the controller.
+  // If no company is selected, show nothing (or all as fallback).
+  const filteredBranches = form.company_id
+    ? branches.filter((b) => String(b.company_id) === String(form.company_id))
+    : [];
+
+  // ── Company change — reset branch if it no longer belongs ────────────────
+  const handleCompanyChange = (v) => {
+    onChange({ target: { name: "company_id", value: v } });
+
+    // Clear branch selection when company changes
+    onChange({ target: { name: "branch_id", value: "" } });
+  };
 
   // ── Hired date change ─────────────────────────────────────────────────────
   const handleHiredDateChange = (e) => {
@@ -108,7 +120,6 @@ export default function Step2EmploymentDetails({
     onChange({ target: { name: "status", value: "active" } });
 
     if (PROBATION_TYPES.includes(value)) {
-      // Probationary / regular — no contract dates needed
       const months   = Number(form.probationary_period_months) || 6;
       const regDate  = toDateInput(addMonths(hired, 6));
       const evalDate = toDateInput(addMonths(hired, months));
@@ -117,23 +128,19 @@ export default function Step2EmploymentDetails({
       onChange({ target: { name: "probationary_period_months",   value: months   } });
       onChange({ target: { name: "probationary_evaluation_date", value: evalDate } });
 
-      // Clear contract date fields
       onChange({ target: { name: "contract_date_from", value: ""      } });
       onChange({ target: { name: "contract_date_to",   value: ""      } });
       onChange({ target: { name: "contract_status",    value: "valid" } });
 
     } else {
-      // Non-probationary: clear probation-specific fields, keep contract dates
       onChange({ target: { name: "regularization_date",          value: "" } });
       onChange({ target: { name: "probationary_period_months",   value: "" } });
       onChange({ target: { name: "probationary_evaluation_date", value: "" } });
 
-      // Seed contract_date_from if not set
       if (CONTRACT_TYPES.includes(value) && !form.contract_date_from) {
         onChange({ target: { name: "contract_date_from", value: todayInput() } });
       }
 
-      // Derive contract_status from existing contract_date_to
       const derived = deriveContractStatus(form.contract_date_to);
       onChange({ target: { name: "contract_status", value: derived } });
       if (derived === "expired") {
@@ -176,13 +183,11 @@ export default function Step2EmploymentDetails({
             >
               <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="probationary">Probationary</SelectItem>
-                <SelectItem value="regular">Regular</SelectItem>
-                <SelectItem value="project_based">Project-based</SelectItem>
-                <SelectItem value="contractual">Contractual</SelectItem>
-                <SelectItem value="reliever">Reliever</SelectItem>
-                <SelectItem value="part_time">Part-time</SelectItem>
-                <SelectItem value="intern">Intern</SelectItem>
+                {opts("employment_type").map(v => (
+                  <SelectItem key={v} value={v}>
+                    {v.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </Field>
@@ -191,13 +196,11 @@ export default function Step2EmploymentDetails({
             <Select value={form.status ?? ""} onValueChange={sel("status")}>
               <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-                <SelectItem value="on_leave">On Leave</SelectItem>
-                <SelectItem value="terminated">Terminated</SelectItem>
-                <SelectItem value="resigned">Resigned</SelectItem>
-                <SelectItem value="retired">Retired</SelectItem>
-                <SelectItem value="contract_end">Contract End</SelectItem>
+                {opts("status").map(v => (
+                  <SelectItem key={v} value={v}>
+                    {v.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </Field>
@@ -209,10 +212,11 @@ export default function Step2EmploymentDetails({
             >
               <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="valid">Valid</SelectItem>
-                <SelectItem value="expired">Expired</SelectItem>
-                <SelectItem value="renewed">Renewed</SelectItem>
-                <SelectItem value="terminated">Terminated</SelectItem>
+                {opts("contract_status").map(v => (
+                  <SelectItem key={v} value={v}>
+                    {v.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </Field>
@@ -232,7 +236,6 @@ export default function Step2EmploymentDetails({
           }
         />
 
-        {/* Contract types: Hired + Contract Start + Contract End */}
         {isContractType && (
           <div className="grid grid-cols-3 gap-4">
             <Field label="Hired Date" error={errors.hired_date}>
@@ -270,7 +273,6 @@ export default function Step2EmploymentDetails({
           </div>
         )}
 
-        {/* Reliever: Hired Date only */}
         {isRelieverType && (
           <div className="grid grid-cols-2 gap-4">
             <Field label="Hired Date" error={errors.hired_date}>
@@ -286,7 +288,6 @@ export default function Step2EmploymentDetails({
           </div>
         )}
 
-        {/* Probationary / Regular: Hired Date + Regularization Date */}
         {isProbationType && (
           <div className="grid grid-cols-2 gap-4">
             <Field label="Hired Date" error={errors.hired_date}>
@@ -314,7 +315,6 @@ export default function Step2EmploymentDetails({
           </div>
         )}
 
-        {/* No type selected */}
         {!hasType && (
           <div className="grid grid-cols-2 gap-4">
             <Field label="Hired Date" error={errors.hired_date}>
@@ -339,28 +339,46 @@ export default function Step2EmploymentDetails({
         />
 
         <div className="grid grid-cols-2 gap-4">
+
+          {/* Company — always show all companies */}
           <Field label="Company" error={errors.company_id}>
             <Select
               value={form.company_id ? String(form.company_id) : ""}
-              onValueChange={(v) => onChange({ target: { name: "company_id", value: v } })}
+              onValueChange={handleCompanyChange}
             >
               <SelectTrigger><SelectValue placeholder="Select company" /></SelectTrigger>
               <SelectContent>
-                {companies.length === 0 && <SelectItem value="_none" disabled>No companies available</SelectItem>}
-                {companies.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.company_name}</SelectItem>)}
+                {companies.length === 0
+                  ? <SelectItem value="_none" disabled>No companies available</SelectItem>
+                  : companies.map((c) => (
+                      <SelectItem key={c.id} value={String(c.id)}>{c.company_name}</SelectItem>
+                    ))
+                }
               </SelectContent>
             </Select>
           </Field>
 
+          {/* Branch — filtered by selected company */}
           <Field label="Branch" error={errors.branch_id}>
             <Select
               value={form.branch_id ? String(form.branch_id) : ""}
               onValueChange={(v) => onChange({ target: { name: "branch_id", value: v } })}
+              disabled={!form.company_id}
             >
-              <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue
+                  placeholder={form.company_id ? "Select branch" : "Select a company first"}
+                />
+              </SelectTrigger>
               <SelectContent>
-                {branches.length === 0 && <SelectItem value="_none" disabled>No branches available</SelectItem>}
-                {branches.map((b) => <SelectItem key={b.id} value={String(b.id)}>{b.branch_name}</SelectItem>)}
+                {filteredBranches.length === 0
+                  ? <SelectItem value="_none" disabled>
+                      {form.company_id ? "No branches for this company" : "Select a company first"}
+                    </SelectItem>
+                  : filteredBranches.map((b) => (
+                      <SelectItem key={b.id} value={String(b.id)}>{b.branch_name}</SelectItem>
+                    ))
+                }
               </SelectContent>
             </Select>
           </Field>
@@ -372,8 +390,12 @@ export default function Step2EmploymentDetails({
             >
               <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
               <SelectContent>
-                {departments.length === 0 && <SelectItem value="_none" disabled>No departments available</SelectItem>}
-                {departments.map((d) => <SelectItem key={d.id} value={String(d.id)}>{d.department_name}</SelectItem>)}
+                {departments.length === 0
+                  ? <SelectItem value="_none" disabled>No departments available</SelectItem>
+                  : departments.map((d) => (
+                      <SelectItem key={d.id} value={String(d.id)}>{d.department_name}</SelectItem>
+                    ))
+                }
               </SelectContent>
             </Select>
           </Field>
@@ -385,8 +407,12 @@ export default function Step2EmploymentDetails({
             >
               <SelectTrigger><SelectValue placeholder="Select position" /></SelectTrigger>
               <SelectContent>
-                {positions.length === 0 && <SelectItem value="_none" disabled>No positions available</SelectItem>}
-                {positions.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.position_name}</SelectItem>)}
+                {positions.length === 0
+                  ? <SelectItem value="_none" disabled>No positions available</SelectItem>
+                  : positions.map((p) => (
+                      <SelectItem key={p.id} value={String(p.id)}>{p.position_name}</SelectItem>
+                    ))
+                }
               </SelectContent>
             </Select>
           </Field>
@@ -394,18 +420,22 @@ export default function Step2EmploymentDetails({
 
         <div className="max-w-xs">
           <Field label="Job Level" error={errors.job_level}>
-            <Input
-              name="job_level"
-              placeholder="e.g. Junior, Senior, Manager"
+            <Select
               value={form.job_level ?? ""}
-              onChange={onChange}
-              className="!bg-white"
-            />
+              onValueChange={sel("job_level")}
+            >
+              <SelectTrigger><SelectValue placeholder="Select job level" /></SelectTrigger>
+              <SelectContent>
+                {opts("job_level").map(v => (
+                  <SelectItem key={v} value={v}>{v}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </Field>
         </div>
       </div>
 
-      {/* ── Probationary Details — regular / probationary only ───── */}
+      {/* ── Probationary Details ─────────────────────────────────── */}
       {isProbationType && (
         <div className="space-y-4">
           <SectionHeading title="Probationary Details" />

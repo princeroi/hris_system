@@ -5,43 +5,57 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Eye, Pencil, Trash2, MoreHorizontal, Mail, Phone, ArrowLeftRight, RotateCcw } from "lucide-react";
+import {
+  Eye,
+  Pencil,
+  Trash2,
+  MoreHorizontal,
+  Mail,
+  Phone,
+  ArrowLeftRight,
+  RotateCcw,
+  Shuffle,
+} from "lucide-react";
 import { getFullName } from "@/utils/employeeUtils";
 import { toUpperCase } from "@/utils/textUtils";
 import { formatContactNumber } from "@/utils/contactFormat";
+import Avatar from "@/Components/ui/Avatar";
 
 const STATUS_STYLES = {
-  active: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  inactive: "bg-slate-100 text-slate-500 ring-slate-200",
-  on_leave: "bg-amber-50 text-amber-700 ring-amber-200",
-  terminated: "bg-red-50 text-red-700 ring-red-200",
-  resigned: "bg-rose-50 text-rose-700 ring-rose-200",
-  retired: "bg-violet-50 text-violet-700 ring-violet-200",
+  active:       "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  inactive:     "bg-slate-100 text-slate-500 ring-slate-200",
+  on_leave:     "bg-amber-50 text-amber-700 ring-amber-200",
+  terminated:   "bg-red-50 text-red-700 ring-red-200",
+  resigned:     "bg-rose-50 text-rose-700 ring-rose-200",
+  retired:      "bg-violet-50 text-violet-700 ring-violet-200",
   contract_end: "bg-orange-50 text-orange-700 ring-orange-200",
 };
 
 const STATUS_DOT = {
-  active: "bg-emerald-500",
-  inactive: "bg-slate-400",
-  on_leave: "bg-amber-500",
-  terminated: "bg-red-500",
-  resigned: "bg-rose-500",
-  retired: "bg-violet-500",
+  active:       "bg-emerald-500",
+  inactive:     "bg-slate-400",
+  on_leave:     "bg-amber-500",
+  terminated:   "bg-red-500",
+  resigned:     "bg-rose-500",
+  retired:      "bg-violet-500",
   contract_end: "bg-orange-500",
 };
 
 function StatusBadge({ status }) {
   const style = STATUS_STYLES[status] ?? "bg-slate-100 text-slate-500 ring-slate-200";
-  const dot = STATUS_DOT[status] ?? "bg-slate-400";
+  const dot   = STATUS_DOT[status]   ?? "bg-slate-400";
 
   const label = status
     ? status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
     : "No Record";
 
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${style}`}>
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${style}`}
+    >
       <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
       {label}
     </span>
@@ -51,56 +65,40 @@ function StatusBadge({ status }) {
 function formatDate(dateStr) {
   if (!dateStr) return "—";
   return new Date(dateStr).toLocaleDateString("en-US", {
-    year: "numeric",
+    year:  "numeric",
     month: "short",
-    day: "numeric",
+    day:   "numeric",
   });
 }
 
-function getInitials(name) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase();
-}
-
-const AVATAR_COLORS = [
-  "bg-blue-100 text-blue-700",
-  "bg-violet-100 text-violet-700",
-  "bg-emerald-100 text-emerald-700",
-  "bg-amber-100 text-amber-700",
-  "bg-rose-100 text-rose-700",
-  "bg-cyan-100 text-cyan-700",
-];
-
-function avatarColor(seed) {
-  const code = String(seed ?? "").split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return AVATAR_COLORS[code % AVATAR_COLORS.length];
-}
-
-export default function EmployeeRow({ employee, onShow, onDelete, onChangeStatus, onRehire }) {
+export default function EmployeeRow({
+  employee,
+  onShow,
+  onDelete,
+  onChangeStatus,
+  onRehire,
+  onReassign,
+}) {
   const employmentDetails = employee.employment_details ?? {};
-  const personalInfo = employee.personal_info ?? {};
-  const status = employmentDetails.status ?? null;
-  const isActive = status === "active";
-  const fullName = toUpperCase(getFullName(employee));
+  const personalInfo      = employee.personal_info      ?? {};
+  const status            = employmentDetails.status    ?? null;
+  const isActive          = status === "active";
+  const fullName          = toUpperCase(getFullName(employee));
 
   return (
     <TableRow className="group border-b border-slate-100 transition-colors hover:bg-slate-50/80">
+
+      {/* Employee No */}
       <TableCell className="py-3.5 pl-5">
         <span className="inline-flex items-center rounded-md bg-slate-50 px-2 py-1 font-mono text-xs font-medium text-slate-600 ring-1 ring-inset ring-slate-200">
           {employee.employee_number}
         </span>
       </TableCell>
 
+      {/* Name + Position */}
       <TableCell className="py-3.5">
         <div className="flex items-center gap-3">
-          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${avatarColor(fullName)}`}>
-            {getInitials(fullName)}
-          </div>
+          <Avatar name={fullName} />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-slate-900">{fullName}</p>
             <p className="truncate text-xs text-slate-500">
@@ -110,15 +108,18 @@ export default function EmployeeRow({ employee, onShow, onDelete, onChangeStatus
         </div>
       </TableCell>
 
+      {/* Company / Branch */}
       <TableCell className="py-3.5">
         <p className="text-sm text-slate-700">{employmentDetails.company_name || "—"}</p>
-        <p className="text-xs text-slate-400">{employmentDetails.branch_name || "—"}</p>
+        <p className="text-xs text-slate-400">{employmentDetails.branch_name  || "—"}</p>
       </TableCell>
 
+      {/* Department */}
       <TableCell className="py-3.5 text-sm text-slate-700">
         {employmentDetails.department_name || "—"}
       </TableCell>
 
+      {/* Contact */}
       <TableCell className="py-3.5">
         <div className="flex flex-col gap-1 text-xs text-slate-500">
           {personalInfo.email ? (
@@ -138,16 +139,21 @@ export default function EmployeeRow({ employee, onShow, onDelete, onChangeStatus
         </div>
       </TableCell>
 
+      {/* Hired Date */}
       <TableCell className="py-3.5 text-sm text-slate-600">
         {formatDate(employmentDetails.hired_date)}
       </TableCell>
 
+      {/* Status */}
       <TableCell className="py-3.5">
         <StatusBadge status={status} />
       </TableCell>
 
+      {/* Actions */}
       <TableCell className="py-3.5 pr-5 text-right">
         <div className="flex items-center justify-end gap-1 opacity-60 transition-opacity group-hover:opacity-100">
+
+          {/* View */}
           <Button
             variant="ghost"
             size="icon"
@@ -157,6 +163,8 @@ export default function EmployeeRow({ employee, onShow, onDelete, onChangeStatus
           >
             <Eye className="h-4 w-4" strokeWidth={1.75} />
           </Button>
+
+          {/* Edit */}
           <Button
             variant="ghost"
             size="icon"
@@ -166,6 +174,8 @@ export default function EmployeeRow({ employee, onShow, onDelete, onChangeStatus
           >
             <Pencil className="h-4 w-4" strokeWidth={1.75} />
           </Button>
+
+          {/* More actions dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
@@ -175,7 +185,36 @@ export default function EmployeeRow({ employee, onShow, onDelete, onChangeStatus
                 <MoreHorizontal className="h-4 w-4" strokeWidth={1.75} />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44 min-w-44">
+
+            <DropdownMenuContent align="end" className="w-48 min-w-48">
+
+              {/* Reassign — only for active employees */}
+              {isActive && onReassign && (
+                <DropdownMenuItem onClick={() => onReassign(employee)}>
+                  <Shuffle className="mr-2 h-4 w-4" strokeWidth={1.75} />
+                  Reassign
+                </DropdownMenuItem>
+              )}
+
+              {/* Change Status — only for active */}
+              {isActive && onChangeStatus && (
+                <DropdownMenuItem onClick={() => onChangeStatus(employee)}>
+                  <ArrowLeftRight className="mr-2 h-4 w-4" strokeWidth={1.75} />
+                  Change Status
+                </DropdownMenuItem>
+              )}
+
+              {/* Rehire — only for inactive/archived */}
+              {!isActive && onRehire && (
+                <DropdownMenuItem onClick={() => onRehire(employee)}>
+                  <RotateCcw className="mr-2 h-4 w-4" strokeWidth={1.75} />
+                  Rehire
+                </DropdownMenuItem>
+              )}
+
+              <DropdownMenuSeparator />
+
+              {/* Delete */}
               <DropdownMenuItem
                 variant="destructive"
                 onClick={() => onDelete(employee.id)}
@@ -183,21 +222,13 @@ export default function EmployeeRow({ employee, onShow, onDelete, onChangeStatus
                 <Trash2 className="mr-2 h-4 w-4" strokeWidth={1.75} />
                 Delete employee
               </DropdownMenuItem>
-              {isActive ? (
-                <DropdownMenuItem onClick={() => onChangeStatus(employee)}>
-                  <ArrowLeftRight className="mr-2 h-4 w-4" strokeWidth={1.75} />
-                  Change Status
-                </DropdownMenuItem>
-              ) : onRehire ? (
-                <DropdownMenuItem onClick={() => onRehire(employee)}>
-                  <RotateCcw className="mr-2 h-4 w-4" strokeWidth={1.75} />
-                  Rehire
-                </DropdownMenuItem>
-              ) : null}
+
             </DropdownMenuContent>
           </DropdownMenu>
+
         </div>
       </TableCell>
+
     </TableRow>
   );
 }

@@ -13,6 +13,7 @@ export default function Edit({
     compensation,
     workExperiences,
     emergencyContacts,
+    cellOptions,
 
     companies,
     branches,
@@ -66,6 +67,7 @@ export default function Edit({
                                 departments={departments}
                                 positions={positions}
                                 workTimeFactors={workTimeFactors}
+                                cellOptions={cellOptions}
                             />
                         </div>
                     </div>

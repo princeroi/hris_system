@@ -17,19 +17,19 @@ return new class extends Migration
             $table->foreignId('employee_id')->constrained('employees')->onDelete('cascade');
 
             $table->string('sss_number')->nullable();
-            $table->enum('sss_status', ['no_sss', 'for_verification', 'verified'])->default('for_verification');
+            $table->string('sss_status')->default('for_verification');
             $table->text('sss_remarks')->nullable();
 
             $table->string('pagibig_number')->nullable();
-            $table->enum('pagibig_status', ['no_pagibig', 'for_verification', 'verified'])->default('for_verification');
+            $table->string('pagibig_status')->default('for_verification');
             $table->text('pagibig_remarks')->nullable();
 
             $table->string('philhealth_number')->nullable();
-            $table->enum('philhealth_status', ['no_philhealth', 'for_verification', 'verified'])->default('for_verification');
+            $table->string('philhealth_status')->default('for_verification');
             $table->text('philhealth_remarks')->nullable();
 
             $table->string('tin_number')->nullable();
-            $table->enum('tin_status', ['no_tin', 'for_verification', 'verified'])->default('for_verification');
+            $table->string('tin_status')->default('for_verification');
             $table->text('tin_remarks')->nullable();
 
             $table->timestamps();

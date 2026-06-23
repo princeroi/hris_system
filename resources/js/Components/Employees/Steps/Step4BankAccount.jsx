@@ -30,16 +30,14 @@ function Field({ label, required, error, children }) {
     );
 }
 
-export default function Step4BankAccount({ form, onChange, errors = {} }) {
-    const sel = (name) => (v) => onChange({ target: { name, value: v } });
+export default function Step4BankAccount({ form, onChange, errors = {}, cellOptions = {} }) {
+    const sel  = (name) => (v) => onChange({ target: { name, value: v } });
+    const opts = (key)  => cellOptions[key] ?? [];
 
-    // When account_name or atm_card_number changes, derive atm_status
     const handleAtmFieldChange = (e) => {
         onChange(e);
-
-        const updatedAccountName  = e.target.name === "account_name"    ? e.target.value : (form.account_name    ?? "");
+        const updatedAccountName   = e.target.name === "account_name"    ? e.target.value : (form.account_name    ?? "");
         const updatedAtmCardNumber = e.target.name === "atm_card_number" ? e.target.value : (form.atm_card_number ?? "");
-
         const isFilled = updatedAccountName.trim() && updatedAtmCardNumber.trim();
         onChange({ target: { name: "atm_status", value: isFilled ? "active" : "pending" } });
     };
@@ -64,15 +62,25 @@ export default function Step4BankAccount({ form, onChange, errors = {} }) {
                     <Field label="ATM Card Number" error={errors.atm_card_number}>
                         <Input name="atm_card_number" placeholder="Enter ATM card number" value={form.atm_card_number ?? ""} onChange={handleAtmFieldChange} className="!bg-white" />
                     </Field>
-                    {/* atm_status is required — non-nullable in DB */}
                     <Field label="ATM Status" required error={errors.atm_status}>
                         <Select value={form.atm_status ?? "pending"} onValueChange={sel("atm_status")}>
                             <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="pending">Pending</SelectItem>
-                                <SelectItem value="released">Released</SelectItem>
-                                <SelectItem value="active">Active</SelectItem>
-                                <SelectItem value="inactive">Inactive</SelectItem>
+                                {opts("atm_status").length > 0
+                                    ? opts("atm_status").map(v => (
+                                        <SelectItem key={v} value={v}>
+                                            {v.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                                        </SelectItem>
+                                    ))
+                                    : (
+                                        <>
+                                            <SelectItem value="pending">Pending</SelectItem>
+                                            <SelectItem value="released">Released</SelectItem>
+                                            <SelectItem value="active">Active</SelectItem>
+                                            <SelectItem value="inactive">Inactive</SelectItem>
+                                        </>
+                                    )
+                                }
                             </SelectContent>
                         </Select>
                     </Field>

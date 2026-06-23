@@ -1,6 +1,6 @@
 // resources/js/Pages/Employees/BulkUpload.jsx
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo  } from "react";
 import { router } from "@inertiajs/react";
 import ExcelJS from "exceljs";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
@@ -135,6 +135,7 @@ export default function BulkUpload({
     positions               = [],
     existingEmployeeNumbers = [],
     workTimeFactors         = [],
+    cellOptions             = {},
 }) {
     const fileRef = useRef(null);
     const [rows,          setRows         ] = useState([emptyRow()]);
@@ -144,12 +145,37 @@ export default function BulkUpload({
     const [activeTab,     setActiveTab    ] = useState(0);
     const [serverErrors,  setServerErrors ] = useState([]);
 
-    const fkOptions = {
-        company_id:    companies.map(c   => ({ value: String(c.id), label: c.company_name    })),
-        branch_id:     branches.map(b    => ({ value: String(b.id), label: b.branch_name     })),
-        department_id: departments.map(d => ({ value: String(d.id), label: d.department_name })),
-        position_id:   positions.map(p   => ({ value: String(p.id), label: p.position_name   })),
-    };
+    useMemo(() => {
+        Object.keys(cellOptions).forEach(key => {
+            CELL_OPTIONS[key] = cellOptions[key];
+        });
+    }, []);
+
+    // ── Per-row fkOptions — branches filtered by the row's company_id ─────────
+    const getFkOptions = useCallback((row) => {
+        const filteredBranches = (row?.company_id && String(row.company_id).trim() !== "")
+            ? branches.filter(b => String(b.company_id) === String(row.company_id))
+            : [];
+
+        return {
+            company_id: companies.map(c => ({
+                value: String(c.id),
+                label: c.company_name,
+            })),
+            branch_id: filteredBranches.map(b => ({
+                value: String(b.id),
+                label: b.branch_name,
+            })),
+            department_id: departments.map(d => ({
+                value: String(d.id),
+                label: d.department_name,
+            })),
+            position_id: positions.map(p => ({
+                value: String(p.id),
+                label: p.position_name,
+            })),
+        };
+    }, [companies, branches, departments, positions]);
 
     const existingNumbersSet = new Set(
         existingEmployeeNumbers.map(n => String(n).trim().toLowerCase())
@@ -183,7 +209,7 @@ export default function BulkUpload({
                 if (key) obj[key] = cell.value ?? "";
             });
             if (Object.values(obj).every(v => v === "" || v === null)) return;
-            parsed.push(applyRowDefaults({ ...emptyRow(), ...parseRow(obj) }));
+            parsed.push(applyRowDefaults({ ...emptyRow(), ...parseRow(obj) }, branches));
         });
 
         setRows(prev => {
@@ -230,19 +256,24 @@ export default function BulkUpload({
                 }
             }
 
+            // Clear branch when company changes
+            if (col === "company_id") {
+                updated.branch_id = "";
+            }
+
             next[rowIdx] = ALWAYS_APPLY_DEFAULTS.has(col)
-                ? applyRowDefaults(updated)
+                ? applyRowDefaults(updated, branches)
                 : updated;
             return next;
         });
-    }, []);
+    }, [branches]);
 
     const deleteRow = (idx) => setRows(prev => prev.filter((_, i) => i !== idx));
     const addRow    = ()    => { setRows(prev => [...prev, emptyRow()]); setActiveTab(0); };
 
     // ── Derived state ─────────────────────────────────────────────────────────
     const rowValidations = rows.map((row, i) =>
-        validateRow(row, rows, i, existingNumbersSet, fkOptions)
+        validateRow(row, rows, i, existingNumbersSet, getFkOptions(row), branches)
     );
     const rowErrorsFlat = rowValidations.map(v => flatErrors(v));
     const totalErrors   = rowErrorsFlat.filter(e => e.length > 0).length;
@@ -256,6 +287,16 @@ export default function BulkUpload({
             const colSet = new Set(tab.cols);
             return rowValidations.filter(({ fieldErrors }) =>
                 Object.keys(fieldErrors).some(k => colSet.has(k))
+            ).length;
+        }
+        if (tab.special === "compensation") {
+            // Count rows that have compensation-related field errors
+            const COMP_FIELDS = new Set([
+                "payroll_type", "salary_type", "effective_date",
+                "monthly_rate", "daily_rate", "hourly_rate",
+            ]);
+            return rowValidations.filter(({ fieldErrors }) =>
+                Object.keys(fieldErrors).some(k => COMP_FIELDS.has(k))
             ).length;
         }
         if (tab.special === "work_experience") {
@@ -320,7 +361,7 @@ export default function BulkUpload({
 
     // ── Column min-width helper ───────────────────────────────────────────────
     const colMinWidth = (col) => {
-        if (FK_COLS.includes(col) || CELL_OPTIONS[col])  return 168;
+        if (FK_COLS.includes(col) || cellOptions[col])  return 168;
         if (GOV_ID_COLS.includes(col))                   return 188;
         if (DATE_KEYS.includes(col))                     return 152;
         if (NUM_KEYS.includes(col))                      return 120;
@@ -518,8 +559,14 @@ export default function BulkUpload({
                             {isSpecial && currentTab.special === "work_experience" && (
                                 <WorkExperiencePanel rows={rows} onUpdate={setRows} />
                             )}
+                            {/* ↓ rowValidations now passed so CompensationPanel can show field errors */}
                             {isSpecial && currentTab.special === "compensation" && (
-                                <CompensationPanel rows={rows} onUpdate={setRows} workTimeFactors={workTimeFactors} />
+                                <CompensationPanel
+                                    rows={rows}
+                                    onUpdate={setRows}
+                                    workTimeFactors={workTimeFactors}
+                                    rowValidations={rowValidations}
+                                />
                             )}
                             {isSpecial && currentTab.special === "emergency_contacts" && (
                                 <EmergencyContactsPanel rows={rows} onUpdate={setRows} />
@@ -538,7 +585,7 @@ export default function BulkUpload({
                                                     #
                                                 </th>
                                                 {currentCols.map(col => {
-                                                    const isDropdown = CELL_OPTIONS[col] || FK_COLS.includes(col);
+                                                    const isDropdown = cellOptions[col] || FK_COLS.includes(col);
                                                     const isReq      = REQUIRED.includes(col);
                                                     return (
                                                         <th
@@ -575,6 +622,8 @@ export default function BulkUpload({
                                                 const empType = String(row.employment_type ?? "");
                                                 const isProb  = PROBATION_TYPES.includes(empType);
 
+                                                const rowFkOptions = getFkOptions(row);
+
                                                 return (
                                                     <tr
                                                         key={ri}
@@ -604,7 +653,6 @@ export default function BulkUpload({
                                                                 cellError ? "ring-1 ring-inset ring-rose-300" : ""
                                                             }`;
 
-                                                            // Contract date range doesn't apply to probationary/regular
                                                             if (CONTRACT_DATE_COLS.includes(col) && isProb) {
                                                                 return (
                                                                     <td key={col} className={tdClass}>
@@ -613,7 +661,6 @@ export default function BulkUpload({
                                                                 );
                                                             }
 
-                                                            // Probationary-only fields don't apply to other employment types
                                                             if (PROBATION_ONLY_COLS.includes(col) && !isProb) {
                                                                 return (
                                                                     <td key={col} className={tdClass}>
@@ -630,7 +677,8 @@ export default function BulkUpload({
                                                                                 col={col}
                                                                                 value={String(row[col] ?? "")}
                                                                                 onChange={v => updateCell(ri, col, v)}
-                                                                                fkOptions={fkOptions}
+                                                                                fkOptions={rowFkOptions}
+                                                                                cellOptions={cellOptions}
                                                                                 error={cellError}
                                                                             />
                                                                             <span className="absolute top-1 right-1 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-600 pointer-events-none">
@@ -642,7 +690,8 @@ export default function BulkUpload({
                                                                             col={col}
                                                                             value={String(row[col] ?? "")}
                                                                             onChange={v => updateCell(ri, col, v)}
-                                                                            fkOptions={fkOptions}
+                                                                            fkOptions={rowFkOptions}
+                                                                            cellOptions={cellOptions}
                                                                             error={cellError}
                                                                         />
                                                                     )}
