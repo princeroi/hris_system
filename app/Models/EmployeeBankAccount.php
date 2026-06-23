@@ -14,6 +14,7 @@ class EmployeeBankAccount extends Model
         'employee_id',
         'bank_name',
         'account_number',
+        'account_name',     
         'atm_card_number',
         'atm_status',
         'gcash_account_number',
@@ -24,8 +25,8 @@ class EmployeeBankAccount extends Model
         'other_account_name',
     ];
 
-    // public function employee(): BelongsTo
-    // {
-    //     return $this->belongsTo(Employee::class, 'employee_id', 'id');
-    // }
+    public function employee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'employee_id', 'id');
+    }
 }

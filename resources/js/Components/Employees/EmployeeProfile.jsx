@@ -47,6 +47,7 @@ const labelMap = {
     weekly_rate: "Weekly Rate", semi_monthly_rate: "Semi-monthly Rate",
     monthly_rate: "Monthly Rate",
     archive: "Archive", rehire: "Rehire",
+    "one-time": "One-time", "bi-weekly": "Bi-weekly", "semi-monthly": "Semi-monthly",
 };
 
 const fmtLabel = (val) =>
@@ -97,6 +98,15 @@ const ATM_COLORS = {
 const LOG_TYPE_COLORS = {
     archive: "bg-orange-50 text-orange-700 ring-orange-200",
     rehire:  "bg-emerald-50 text-emerald-700 ring-emerald-200",
+};
+
+const FREQ_COLORS = {
+    "one-time":     "bg-slate-100 text-slate-500 ring-slate-200",
+    "daily":        "bg-sky-50 text-sky-700 ring-sky-200",
+    "weekly":       "bg-violet-50 text-violet-700 ring-violet-200",
+    "bi-weekly":    "bg-blue-50 text-blue-700 ring-blue-200",
+    "semi-monthly": "bg-amber-50 text-amber-700 ring-amber-200",
+    "monthly":      "bg-emerald-50 text-emerald-700 ring-emerald-200",
 };
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
@@ -464,15 +474,20 @@ function BankTab({ ba }) {
     );
 }
 
-function CompensationTab({ cp }) {
+// ─── Compensation tab ─────────────────────────────────────────────────────────
+
+function CompensationTab({ cp, earnings = [] }) {
     return (
         <div className="space-y-4">
+
+            {/* Rate tiles */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <MoneyTile label="Monthly rate" amount={cp.monthly_rate} />
                 <MoneyTile label="Daily rate"   amount={cp.daily_rate} />
                 <MoneyTile label="Hourly rate"  amount={cp.hourly_rate} />
             </div>
 
+            {/* Payroll details */}
             <InfoCard icon={BanknoteIcon} title="Payroll details">
                 <FieldGrid cols={3}>
                     <Field label="Payroll type"   value={cp.payroll_type}   badge colorMap={STATUS_COLORS} />
@@ -480,6 +495,92 @@ function CompensationTab({ cp }) {
                     <Field label="Effective date" value={fmtDate(cp.effective_date)} />
                 </FieldGrid>
             </InfoCard>
+
+            {/* Earnings */}
+            <SectionDivider label="Additional earnings" />
+
+            {earnings.length === 0 ? (
+                <EmptyState message="No additional earnings assigned." />
+            ) : (
+                <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                    {/* Table header */}
+                    <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-slate-100 bg-slate-50">
+                        <p className="col-span-4 text-[10px] font-semibold uppercase tracking-[0.07em] text-slate-400">Earning</p>
+                        <p className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.07em] text-slate-400 text-right">Amount</p>
+                        <p className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.07em] text-slate-400 text-center">Frequency</p>
+                        <p className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.07em] text-slate-400 text-center">Type</p>
+                        <p className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.07em] text-slate-400 text-right">Effective</p>
+                    </div>
+
+                    {/* Table rows */}
+                    <div className="divide-y divide-slate-100">
+                        {earnings.map((row, i) => {
+                            // earning name comes from the eager-loaded relation or falls back to earning_id
+                            const earningName = row.earning?.name ?? `Earning #${row.earning_id}`;
+                            return (
+                                <div
+                                    key={i}
+                                    className="grid grid-cols-12 gap-4 items-center px-5 py-3.5 hover:bg-slate-50/60 transition-colors"
+                                >
+                                    {/* Name */}
+                                    <div className="col-span-4">
+                                        <p className="text-sm font-medium text-slate-800">{earningName}</p>
+                                    </div>
+
+                                    {/* Amount */}
+                                    <div className="col-span-2 text-right">
+                                        <p className="text-sm font-semibold text-slate-900">
+                                            <span className="text-xs font-normal text-slate-400 mr-0.5">₱</span>
+                                            {fmtMoney(row.amount)}
+                                        </p>
+                                    </div>
+
+                                    {/* Frequency */}
+                                    <div className="col-span-2 flex justify-center">
+                                        <Badge value={row.frequency} colorMap={FREQ_COLORS} />
+                                    </div>
+
+                                    {/* Continuous / fixed */}
+                                    <div className="col-span-2 flex justify-center">
+                                        {row.is_continuous ? (
+                                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide ring-1 uppercase bg-emerald-50 text-emerald-700 ring-emerald-200">
+                                                Continuous
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide ring-1 uppercase bg-amber-50 text-amber-700 ring-amber-200">
+                                                Fixed
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    {/* Effective / end dates */}
+                                    <div className="col-span-2 text-right">
+                                        <p className="text-[11px] text-slate-600">{fmtDate(row.effective_date)}</p>
+                                        {!row.is_continuous && row.end_date && (
+                                            <p className="text-[10px] text-slate-400 mt-0.5">
+                                                until {fmtDate(row.end_date)}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Footer: total */}
+                    <div className="flex items-center justify-between px-5 py-3.5 border-t border-slate-100 bg-slate-50">
+                        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                            {earnings.length} earning{earnings.length !== 1 ? "s" : ""}
+                        </p>
+                        <p className="text-sm font-semibold text-slate-900">
+                            <span className="text-xs font-normal text-slate-400 mr-1">Total ₱</span>
+                            {fmtMoney(
+                                earnings.reduce((sum, r) => sum + Number(r.amount ?? 0), 0)
+                            )}
+                        </p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -566,6 +667,7 @@ export default function EmployeeProfile({
     compensation,
     workExperiences,
     emergencyContacts,
+    employeeEarnings = [],  // ← new prop
     statusLogs = [],
 }) {
     const [activeTab, setActiveTab] = useState("personal");
@@ -577,6 +679,7 @@ export default function EmployeeProfile({
     const cp = compensation       ?? {};
     const we = Array.isArray(workExperiences)   ? workExperiences   : [];
     const ec = Array.isArray(emergencyContacts) ? emergencyContacts : [];
+    const ee = Array.isArray(employeeEarnings)  ? employeeEarnings  : [];
 
     return (
         <div className="rounded-2xl bg-white ring-1 ring-slate-200 overflow-hidden shadow-sm">
@@ -585,7 +688,8 @@ export default function EmployeeProfile({
             <div className="flex items-stretch overflow-x-auto border-b border-slate-100 bg-white px-2 scrollbar-none">
                 {TABS.map(({ id, label, icon: Icon }) => {
                     const isActive = activeTab === id;
-                    const showDot = id === "employment" && statusLogs.length > 0;
+                    const showDot  = id === "employment"   && statusLogs.length > 0;
+                    const earningsDot = id === "compensation" && ee.length > 0;
                     return (
                         <button
                             key={id}
@@ -607,6 +711,11 @@ export default function EmployeeProfile({
                                     {statusLogs.length}
                                 </span>
                             )}
+                            {earningsDot && (
+                                <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-100 px-1 text-[9px] font-bold text-emerald-600 ring-1 ring-emerald-200">
+                                    {ee.length}
+                                </span>
+                            )}
                         </button>
                     );
                 })}
@@ -618,7 +727,7 @@ export default function EmployeeProfile({
                 {activeTab === "employment"   && <EmploymentTab   ed={ed} statusLogs={statusLogs} />}
                 {activeTab === "govids"       && <GovIdsTab       gi={gi} />}
                 {activeTab === "bank"         && <BankTab         ba={ba} />}
-                {activeTab === "compensation" && <CompensationTab cp={cp} />}
+                {activeTab === "compensation" && <CompensationTab cp={cp} earnings={ee} />}
                 {activeTab === "experience"   && <ExperienceTab   we={we} />}
                 {activeTab === "emergency"    && <EmergencyTab    ec={ec} />}
             </div>

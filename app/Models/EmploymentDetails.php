@@ -30,25 +30,25 @@ class EmploymentDetails extends Model
     ];
 
     protected $casts = [
-        'hired_date'                        => 'date:Y-m-d',
-        'regularization_date'               => 'date:Y-m-d',
-        'contract_date_from'                => 'date:Y-m-d',
-        'contract_date_to'                  => 'date:Y-m-d',
-        'probationary_period_months'        => 'integer',
-        'probationary_evaluation_date'      => 'date:Y-m-d',
+        'hired_date'                   => 'date:Y-m-d',
+        'regularization_date'          => 'date:Y-m-d',
+        'contract_date_from'           => 'date:Y-m-d',
+        'contract_date_to'             => 'date:Y-m-d',
+        'probationary_period_months'   => 'integer',
+        'probationary_evaluation_date' => 'date:Y-m-d',
     ];
 
-    public function company() : BelongsTo
+    public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class, 'company_id', 'id');
     }
 
-    public function department() : BelongsTo 
+    public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class, 'department_id', 'id');
     }
-    
-    public function position() : BelongsTo 
+
+    public function position(): BelongsTo
     {
         return $this->belongsTo(Position::class, 'position_id', 'id');
     }

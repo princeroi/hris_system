@@ -571,6 +571,29 @@ export function validateRow(
             addField(prefix + ".contact_person_address", `Contact ${ci + 1}: Address must be 500 characters or less`);
     });
 
+    // ── Earnings sub-row validation ───────────────────────────────────────────
+    (row.employee_earnings ?? []).forEach((earn, ei) => {
+        const prefix = `employee_earnings[${ei}]`;
+
+        if (isBlank(earn.earning_id))
+            addField(prefix + ".earning_id", `Earning ${ei + 1}: Earning type is required`);
+
+        if (isBlank(earn.amount))
+            addField(prefix + ".amount", `Earning ${ei + 1}: Amount is required`);
+        else if (isNaN(Number(earn.amount)) || Number(earn.amount) < 0)
+            addField(prefix + ".amount", `Earning ${ei + 1}: Amount must be a valid positive number`);
+
+        if (!isBlank(earn.effective_date) && !isDate(earn.effective_date))
+            addField(prefix + ".effective_date", `Earning ${ei + 1}: Please enter a valid effective date`);
+
+        if (!isBlank(earn.end_date) && !isDate(earn.end_date))
+            addField(prefix + ".end_date", `Earning ${ei + 1}: Please enter a valid end date`);
+
+        if (isDate(earn.effective_date) && isDate(earn.end_date) &&
+            parseD(earn.end_date) < parseD(earn.effective_date))
+            addField(prefix + ".end_date", `Earning ${ei + 1}: End date must be on or after effective date`);
+    });
+
     return { fieldErrors, rowErrors };
 }
 
@@ -583,6 +606,15 @@ export function flatErrors({ fieldErrors, rowErrors }) {
 export const emptyWorkExp = () => ({
     company_name: "", position: "", department: "",
     start_date: "", end_date: "", years_of_service: "", remarks: "",
+});
+
+export const emptyEarning = (hiredDate = "") => ({
+    earning_id:     "",
+    amount:         "",
+    frequency:      "semi-monthly",
+    is_continuous:  true,
+    effective_date: hiredDate,
+    end_date:       "",
 });
 
 export const emptyContact = () => ({
@@ -629,6 +661,8 @@ export const emptyRow = () => ({
 
     // System
     is_active: true,
+
+    employee_earnings:  [],
 
     // Arrays
     work_experiences:   [],

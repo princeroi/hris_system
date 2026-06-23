@@ -84,4 +84,14 @@ class Employee extends Model
     {
         return $this->hasMany(EmployeeStatusLog::class, 'employee_id', 'id');
     }
+
+    // public function earnings(): HasMany
+    // {
+    //     return $this->hasMany(EmployeeEarning::class);
+    // }
+
+    public function employeeEarnings(): HasMany
+    {
+        return $this->hasMany(EmployeeEarning::class);
+    }
 }

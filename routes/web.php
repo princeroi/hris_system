@@ -13,7 +13,7 @@ use App\Http\Controllers\EmployeeOptionController;
 use App\Http\Controllers\CompanyBranchesController;
 use App\Http\Controllers\DepartmentsController;
 use App\Http\Controllers\PositionsController;
-
+use App\Http\Controllers\EarningsController;
 Route::get('/', function () {
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
@@ -58,6 +58,7 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('departments', DepartmentsController::class);
     Route::resource('positions', PositionsController::class);
+    Route::resource('earnings', EarningsController::class);
 });
 
 

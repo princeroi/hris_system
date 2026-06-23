@@ -19,10 +19,10 @@ class DepartmentsController extends Controller
         ]);
     }
 
-    public function create(): Response
-    {
-        return Inertia::render('Departments/Create');
-    }
+    // public function create(): Response
+    // {
+    //     return Inertia::render('Departments/Create');
+    // }
 
     public function store(Request $request): RedirectResponse
     {
@@ -36,12 +36,12 @@ class DepartmentsController extends Controller
             ->with('success', 'Department created.');
     }
 
-    public function edit(Department $department): Response
-    {
-        return Inertia::render('Departments/Edit', [
-            'department' => $department,
-        ]);
-    }
+    // public function edit(Department $department): Response
+    // {
+    //     return Inertia::render('Departments/Edit', [
+    //         'department' => $department,
+    //     ]);
+    // }
 
     public function update(Request $request, Department $department): RedirectResponse
     {

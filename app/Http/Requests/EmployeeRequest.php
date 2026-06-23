@@ -102,6 +102,14 @@ class EmployeeRequest extends FormRequest
             'effective_date' => ['nullable', 'date'],
             'is_current'     => ['nullable', 'boolean'],
 
+            'employee_earnings'                    => ['nullable', 'array'],
+            'employee_earnings.*.earning_id'       => ['required', 'integer', 'exists:earnings,id'],
+            'employee_earnings.*.amount'           => ['required', 'numeric', 'min:0'],
+            'employee_earnings.*.frequency'        => ['nullable', 'string', 'in:one-time,daily,weekly,bi-weekly,semi-monthly,monthly'],
+            'employee_earnings.*.is_continuous'    => ['boolean'],
+            'employee_earnings.*.effective_date'   => ['nullable', 'date'],
+            'employee_earnings.*.end_date'         => ['nullable', 'date', 'after_or_equal:employee_earnings.*.effective_date'],
+
             // ── Work Experience ───────────────────────────────────────
             'work_experiences'                       => ['nullable', 'array'],
             'work_experiences.*.company_name'        => ['nullable', 'string', 'max:255'],

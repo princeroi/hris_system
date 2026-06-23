@@ -59,6 +59,7 @@ const STEP_FIELDS = {
         "monthly_rate", "daily_rate", "hourly_rate",
         "payroll_type", "salary_type",
         "effective_date", "is_current",
+        "employee_earnings",
     ],
     6: ["work_experiences"],
     7: ["emergency_contacts"],
@@ -74,8 +75,43 @@ const STEP_SCHEMAS = {
     7: emergencyContactSchema,
 };
 
+// All fields that hold a date value (yyyy-MM-dd for <input type="date">)
+const DATE_FIELDS = [
+    "birth_date",
+    "hired_date",
+    "regularization_date",
+    "contract_date_from",
+    "contract_date_to",
+    "probationary_evaluation_date",
+    "effective_date",
+];
+
+// ─── Date helpers ─────────────────────────────────────────────────────────────
+
 function toDateInput(date) {
     return date.toISOString().split("T")[0];
+}
+
+/**
+ * Strips the time portion from ISO datetime strings so they conform to
+ * the "yyyy-MM-dd" format required by <input type="date">.
+ *
+ * Handles:
+ *   "2020-05-31T16:00:00.000000Z"  →  "2020-05-31"
+ *   "2020-05-31"                   →  "2020-05-31"  (pass-through)
+ *   Date instance                  →  "2020-05-31"
+ *   null / undefined / ""          →  ""
+ */
+function normalizeDate(value) {
+    if (!value) return "";
+    if (value instanceof Date) return toDateInput(value);
+    if (typeof value === "string") {
+        // ISO datetime: take only the date part before "T"
+        const tIndex = value.indexOf("T");
+        if (tIndex !== -1) return value.slice(0, tIndex);
+        return value;
+    }
+    return value;
 }
 
 function getDefaultDates() {
@@ -85,11 +121,10 @@ function getDefaultDates() {
     return {
         hired_date:          toDateInput(today),
         regularization_date: toDateInput(sixMonthsLater),
-        effective_date:      toDateInput(today),
     };
 }
 
-const { hired_date, regularization_date, effective_date } = getDefaultDates();
+const { hired_date, regularization_date } = getDefaultDates();
 
 const emptyForm = {
     // Employee
@@ -167,13 +202,46 @@ const emptyForm = {
     hourly_rate:         "",
     payroll_type:        "semi_monthly",
     salary_type:         "daily_rate",
-    effective_date,
+    effective_date:      hired_date,
     is_current:          true,
+    employee_earnings:   [],
 
     // Arrays
     work_experiences:   [],
     emergency_contacts: [],
 };
+
+// ─── Normalize all date fields in a data object coming from the backend ───────
+
+function normalizeInitialData(data) {
+    const result = { ...emptyForm, ...data };
+
+    // Top-level date fields
+    DATE_FIELDS.forEach((field) => {
+        result[field] = normalizeDate(result[field]);
+    });
+
+    // Nested: work_experiences
+    if (Array.isArray(result.work_experiences)) {
+        result.work_experiences = result.work_experiences.map((exp) => ({
+            ...exp,
+            start_date: normalizeDate(exp.start_date),
+            end_date:   normalizeDate(exp.end_date),
+        }));
+    }
+
+    // Nested: employee_earnings
+    if (Array.isArray(result.employee_earnings)) {
+        result.employee_earnings = result.employee_earnings.map((row) => ({
+            ...row,
+            effective_date: normalizeDate(row.effective_date),
+        }));
+    }
+
+    return result;
+}
+
+// ─── Zod helpers ──────────────────────────────────────────────────────────────
 
 function pickStepData(form, stepId) {
     return Object.fromEntries(
@@ -181,21 +249,16 @@ function pickStepData(form, stepId) {
     );
 }
 
-// ─── Flatten Zod issues into a { fieldKey: firstMessage } map ────────────────
-// Handles both top-level fields and nested array fields:
-//   path = ["work_experiences", 0, "end_date"]  →  "work_experiences.0.end_date"
-//   path = ["emergency_contacts", 1, "contact_person_phone"] → same pattern
-
+/**
+ * Flatten Zod issues into a { fieldKey: firstMessage } map.
+ * Handles both top-level fields and nested array fields:
+ *   path = ["work_experiences", 0, "end_date"]  →  "work_experiences.0.end_date"
+ */
 function flattenZodErrors(zodError) {
     const fieldErrors = {};
     for (const issue of zodError.issues) {
         if (issue.path.length === 0) continue;
-
-        // Build a dot-notation key from the path array
-        const key = issue.path
-            .map((segment) => String(segment))
-            .join(".");
-
+        const key = issue.path.map((segment) => String(segment)).join(".");
         if (!fieldErrors[key]) {
             fieldErrors[key] = issue.message;
         }
@@ -211,20 +274,7 @@ function validateStep(stepId, form) {
     return flattenZodErrors(result.error);
 }
 
-// ─── Count errors that belong to a step ──────────────────────────────────────
-// Top-level fields are checked by inclusion in STEP_FIELDS[stepId].
-// Nested array errors start with "work_experiences." or "emergency_contacts."
-
-function countStepErrors(errors, stepId) {
-    let count = 0;
-    const topLevelSet = new Set(STEP_FIELDS[stepId]);
-
-    for (const key of Object.keys(errors)) {
-        const rootKey = key.split(".")[0]; // e.g. "work_experiences" or "employee_number"
-        if (topLevelSet.has(rootKey)) count++;
-    }
-    return count;
-}
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function EmployeeWizard({
     initialData,
@@ -235,9 +285,12 @@ export default function EmployeeWizard({
     positions       = [],
     workTimeFactors = [],
     cellOptions     = {},
+    earnings        = [],
 }) {
     const [step,    setStep]    = useState(1);
-    const [form,    setForm]    = useState(initialData ? { ...emptyForm, ...initialData } : emptyForm);
+    const [form,    setForm]    = useState(() =>
+        initialData ? normalizeInitialData(initialData) : emptyForm
+    );
     const [errors,  setErrors]  = useState({});
     const [visited, setVisited] = useState(new Set([1]));
 
@@ -245,8 +298,22 @@ export default function EmployeeWizard({
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setForm((prev) => ({ ...prev, [name]: value }));
-        // Clear the error for this exact key (including nested keys like "work_experiences.0.end_date")
+
+        setForm((prev) => {
+            const next = { ...prev, [name]: value };
+
+            if (name === "hired_date") {
+                next.effective_date = value;
+                // Sync all earning rows' effective_date to new hired_date
+                next.employee_earnings = (prev.employee_earnings ?? []).map((row) => ({
+                    ...row,
+                    effective_date: value,
+                }));
+            }
+
+            return next;
+        });
+
         if (errors[name]) {
             setErrors((prev) => {
                 const next = { ...prev };
@@ -262,7 +329,7 @@ export default function EmployeeWizard({
             const next = { ...prev };
             // Clear top-level keys
             Object.keys(fields).forEach((key) => delete next[key]);
-            // Also clear any nested errors for array fields (e.g. clearing work_experiences clears work_experiences.0.*)
+            // Also clear any nested errors for array fields
             Object.keys(fields).forEach((key) => {
                 Object.keys(next).forEach((errKey) => {
                     if (errKey.startsWith(key + ".")) delete next[errKey];
@@ -397,6 +464,7 @@ export default function EmployeeWizard({
                     errors={errors}
                     workTimeFactors={workTimeFactors}
                     cellOptions={cellOptions}
+                    earnings={earnings}
                 />
             );
             case 6: return (

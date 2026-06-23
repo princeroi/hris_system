@@ -46,11 +46,25 @@ const BriefcaseIcon = () => (
     </svg>
 );
 
-// Sliders icon for Options (replaces cog)
 const SlidersIcon = () => (
     <svg className="h-[15px] w-[15px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
         <path strokeLinecap="round" strokeLinejoin="round"
             d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+    </svg>
+);
+
+// Coins icon for Earnings & Deductions
+const CoinsIcon = () => (
+    <svg className="h-[15px] w-[15px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round"
+            d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
+    </svg>
+);
+
+// Arrow up-down icon for Earnings sub-item
+const ArrowsUpDownIcon = () => (
+    <svg className="h-[13px] w-[13px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" />
     </svg>
 );
 
@@ -80,7 +94,6 @@ const CloseIcon = () => (
     </svg>
 );
 
-// Chevron for collapsible sections
 const ChevronIcon = ({ open }) => (
     <svg
         className="h-[11px] w-[11px] shrink-0"
@@ -126,7 +139,7 @@ function CollapsibleNavItem({ label, icon, children, activePrefixes, closeSideba
             <div
                 className="nav-sub-list"
                 style={{
-                    maxHeight: open ? '200px' : '0px',
+                    maxHeight: open ? '300px' : '0px',
                     overflow: 'hidden',
                     transition: 'max-height 0.22s cubic-bezier(0.4,0,0.2,1)',
                 }}
@@ -233,7 +246,6 @@ export default function AuthenticatedLayout({ header, children }) {
                 .nav-link:hover .nav-icon,
                 .nav-link.active .nav-icon { opacity: 1; }
 
-                /* Collapsible parent button */
                 .nav-collapsible-btn {
                     display: flex;
                     align-items: center;
@@ -270,7 +282,6 @@ export default function AuthenticatedLayout({ header, children }) {
                 .nav-collapsible-btn:hover .nav-icon,
                 .nav-collapsible-btn.active-parent .nav-icon { opacity: 1; }
 
-                /* Sub-items: connector line */
                 .nav-sub-list {
                     position: relative;
                 }
@@ -436,11 +447,9 @@ export default function AuthenticatedLayout({ header, children }) {
                     {/* Navigation */}
                     <nav className="no-scrollbar flex-1 overflow-y-auto px-3 py-4">
 
-                        {/* ── Main group ── */}
+                        {/* ── Main ── */}
                         <span className="nav-group-label">Main</span>
                         <div className="flex flex-col gap-0.5 mb-1">
-
-                            {/* Dashboard */}
                             <Link
                                 href={route('dashboard')}
                                 onClick={closeSidebar}
@@ -450,7 +459,6 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <span>Dashboard</span>
                             </Link>
 
-                            {/* Employees — collapsible */}
                             <CollapsibleNavItem
                                 label="Employees"
                                 icon={<UsersIcon />}
@@ -474,12 +482,11 @@ export default function AuthenticatedLayout({ header, children }) {
                                     <span>Archived</span>
                                 </Link>
                             </CollapsibleNavItem>
-
                         </div>
 
                         <div className="nav-divider" />
 
-                        {/* ── Organization group — collapsible ── */}
+                        {/* ── Organization ── */}
                         <span className="nav-group-label">Organization</span>
                         <div className="flex flex-col gap-0.5 mb-1">
                             <CollapsibleNavItem
@@ -517,7 +524,38 @@ export default function AuthenticatedLayout({ header, children }) {
 
                         <div className="nav-divider" />
 
-                        {/* ── Configuration group — collapsible ── */}
+                        {/* ── Payroll ── */}
+                        <span className="nav-group-label">Payroll</span>
+                        <div className="flex flex-col gap-0.5 mb-1">
+                            <CollapsibleNavItem
+                                label="Earnings & Deductions"
+                                icon={<CoinsIcon />}
+                                activePrefixes={['earnings', 'deductions']}
+                                closeSidebar={closeSidebar}
+                            >
+                                <Link
+                                    href={route('earnings.index')}
+                                    onClick={closeSidebar}
+                                    className={`nav-sub-link${isActive('earnings') ? ' active' : ''}`}
+                                >
+                                    <span className="nav-icon"><ArrowsUpDownIcon /></span>
+                                    <span>Earnings</span>
+                                </Link>
+                                {/* Deductions — add when ready */}
+                                {/* <Link
+                                    href={route('deductions.index')}
+                                    onClick={closeSidebar}
+                                    className={`nav-sub-link${isActive('deductions') ? ' active' : ''}`}
+                                >
+                                    <span className="nav-icon"><ArrowsUpDownIcon /></span>
+                                    <span>Deductions</span>
+                                </Link> */}
+                            </CollapsibleNavItem>
+                        </div>
+
+                        <div className="nav-divider" />
+
+                        {/* ── Configuration ── */}
                         <span className="nav-group-label">Configuration</span>
                         <div className="flex flex-col gap-0.5 mb-1">
                             <CollapsibleNavItem

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head } from '@inertiajs/react';
 
-export default function Create({ companies, branches, departments, positions, workTimeFactors, cellOptions  }) {
+export default function Create({ companies, branches, departments, positions, workTimeFactors, cellOptions, earnings  }) {
     const handleSubmit = (data) => {
         router.post("/employees", data);
     };
@@ -42,6 +42,7 @@ export default function Create({ companies, branches, departments, positions, wo
                                 positions={positions}
                                 workTimeFactors={workTimeFactors}
                                 cellOptions={cellOptions}
+                                earnings={earnings}
                             />
                         </div>
                     </div>

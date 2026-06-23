@@ -35,11 +35,24 @@ export default function Step4BankAccount({ form, onChange, errors = {}, cellOpti
     const opts = (key)  => cellOptions[key] ?? [];
 
     const handleAtmFieldChange = (e) => {
+        // Fire the actual field change first
         onChange(e);
+
         const updatedAccountName   = e.target.name === "account_name"    ? e.target.value : (form.account_name    ?? "");
         const updatedAtmCardNumber = e.target.name === "atm_card_number" ? e.target.value : (form.atm_card_number ?? "");
-        const isFilled = updatedAccountName.trim() && updatedAtmCardNumber.trim();
-        onChange({ target: { name: "atm_status", value: isFilled ? "active" : "pending" } });
+
+        const bothCleared = !updatedAccountName.trim() && !updatedAtmCardNumber.trim();
+        const currentStatus = form.atm_status ?? "pending";
+
+        // Only touch atm_status when:
+        //   1. Both fields are cleared → reset to "pending"
+        //   2. Status is still the default "pending" and both fields are now filled → promote to "active"
+        // Leave any other status (released, inactive, etc.) from the DB untouched.
+        if (bothCleared) {
+            onChange({ target: { name: "atm_status", value: "pending" } });
+        } else if (currentStatus === "pending" && updatedAccountName.trim() && updatedAtmCardNumber.trim()) {
+            onChange({ target: { name: "atm_status", value: "active" } });
+        }
     };
 
     return (
@@ -51,16 +64,34 @@ export default function Step4BankAccount({ form, onChange, errors = {}, cellOpti
 
                 <div className="grid grid-cols-2 gap-4">
                     <Field label="Bank Name" error={errors.bank_name}>
-                        <Input name="bank_name" placeholder="e.g. BDO, BPI, Metrobank" value={form.bank_name ?? ""} onChange={onChange} className="!bg-white" />
+                        <Input
+                            name="bank_name"
+                            placeholder="e.g. BDO, BPI, Metrobank"
+                            value={form.bank_name ?? ""}
+                            onChange={onChange}
+                            className="!bg-white"
+                        />
                     </Field>
                     <Field label="Account Name" error={errors.account_name}>
-                        <Input name="account_name" placeholder="Enter account name" value={form.account_name ?? ""} onChange={handleAtmFieldChange} className="!bg-white" />
+                        <Input
+                            name="account_name"
+                            placeholder="Enter account name"
+                            value={form.account_name ?? ""}
+                            onChange={handleAtmFieldChange}
+                            className="!bg-white"
+                        />
                     </Field>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                     <Field label="ATM Card Number" error={errors.atm_card_number}>
-                        <Input name="atm_card_number" placeholder="Enter ATM card number" value={form.atm_card_number ?? ""} onChange={handleAtmFieldChange} className="!bg-white" />
+                        <Input
+                            name="atm_card_number"
+                            placeholder="Enter ATM card number"
+                            value={form.atm_card_number ?? ""}
+                            onChange={handleAtmFieldChange}
+                            className="!bg-white"
+                        />
                     </Field>
                     <Field label="ATM Status" required error={errors.atm_status}>
                         <Select value={form.atm_status ?? "pending"} onValueChange={sel("atm_status")}>
@@ -92,10 +123,22 @@ export default function Step4BankAccount({ form, onChange, errors = {}, cellOpti
                 <SectionHeading title="GCash" />
                 <div className="grid grid-cols-2 gap-4">
                     <Field label="GCash Account Number" error={errors.gcash_account_number}>
-                        <Input name="gcash_account_number" placeholder="e.g. 09XX XXX XXXX" value={form.gcash_account_number ?? ""} onChange={onChange} className="!bg-white" />
+                        <Input
+                            name="gcash_account_number"
+                            placeholder="e.g. 09XX XXX XXXX"
+                            value={form.gcash_account_number ?? ""}
+                            onChange={onChange}
+                            className="!bg-white"
+                        />
                     </Field>
                     <Field label="GCash Account Name" error={errors.gcash_account_name}>
-                        <Input name="gcash_account_name" placeholder="Enter GCash account name" value={form.gcash_account_name ?? ""} onChange={onChange} className="!bg-white" />
+                        <Input
+                            name="gcash_account_name"
+                            placeholder="Enter GCash account name"
+                            value={form.gcash_account_name ?? ""}
+                            onChange={onChange}
+                            className="!bg-white"
+                        />
                     </Field>
                 </div>
             </div>
@@ -105,16 +148,40 @@ export default function Step4BankAccount({ form, onChange, errors = {}, cellOpti
                 <SectionHeading title="Other Bank Account" description="Optional secondary account." />
                 <div className="grid grid-cols-2 gap-4">
                     <Field label="Bank Type" error={errors.other_bank_type}>
-                        <Input name="other_bank_type" placeholder="e.g. Savings, Checking" value={form.other_bank_type ?? ""} onChange={onChange} className="!bg-white" />
+                        <Input
+                            name="other_bank_type"
+                            placeholder="e.g. Savings, Checking"
+                            value={form.other_bank_type ?? ""}
+                            onChange={onChange}
+                            className="!bg-white"
+                        />
                     </Field>
                     <Field label="Bank Name" error={errors.other_bank_name}>
-                        <Input name="other_bank_name" placeholder="e.g. UnionBank, Landbank" value={form.other_bank_name ?? ""} onChange={onChange} className="!bg-white" />
+                        <Input
+                            name="other_bank_name"
+                            placeholder="e.g. UnionBank, Landbank"
+                            value={form.other_bank_name ?? ""}
+                            onChange={onChange}
+                            className="!bg-white"
+                        />
                     </Field>
                     <Field label="Account Number" error={errors.other_account_number}>
-                        <Input name="other_account_number" placeholder="Enter account number" value={form.other_account_number ?? ""} onChange={onChange} className="!bg-white" />
+                        <Input
+                            name="other_account_number"
+                            placeholder="Enter account number"
+                            value={form.other_account_number ?? ""}
+                            onChange={onChange}
+                            className="!bg-white"
+                        />
                     </Field>
                     <Field label="Account Name" error={errors.other_account_name}>
-                        <Input name="other_account_name" placeholder="Enter account name" value={form.other_account_name ?? ""} onChange={onChange} className="!bg-white" />
+                        <Input
+                            name="other_account_name"
+                            placeholder="Enter account name"
+                            value={form.other_account_name ?? ""}
+                            onChange={onChange}
+                            className="!bg-white"
+                        />
                     </Field>
                 </div>
             </div>

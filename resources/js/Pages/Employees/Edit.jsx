@@ -13,7 +13,9 @@ export default function Edit({
     compensation,
     workExperiences,
     emergencyContacts,
+    employeeEarnings,   // ← destructure the new prop from the controller
     cellOptions,
+    earnings,
 
     companies,
     branches,
@@ -58,8 +60,10 @@ export default function Edit({
                                     ...govIds,
                                     ...bankAccount,
                                     ...compensation,
-                                    work_experiences: workExperiences ?? [],
-                                    emergency_contacts:    emergencyContacts    ?? [],
+                                    // Arrays — always spread as arrays, never undefined
+                                    employee_earnings:  employeeEarnings  ?? [],
+                                    work_experiences:   workExperiences   ?? [],
+                                    emergency_contacts: emergencyContacts ?? [],
                                 }}
                                 onSubmit={handleSubmit}
                                 companies={companies}
@@ -68,6 +72,7 @@ export default function Edit({
                                 positions={positions}
                                 workTimeFactors={workTimeFactors}
                                 cellOptions={cellOptions}
+                                earnings={earnings}
                             />
                         </div>
                     </div>

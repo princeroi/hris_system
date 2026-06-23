@@ -82,6 +82,12 @@ export const TABS = [
         special: "compensation",
     },
     {
+        id: "earnings",
+        label: "Earnings",
+        icon: "💵",
+        special: "earnings",
+    },
+    {
         id: "work_experience",
         label: "Work Experience",
         icon: "📋",

@@ -47,6 +47,7 @@ export default function Show({
     compensation,
     workExperiences,
     emergencyContacts,
+    employeeEarnings = [],   // ← new prop
     statusLogs = [],
 }) {
     const status = employmentDetails?.status ?? "unknown";
@@ -152,6 +153,7 @@ export default function Show({
                         compensation={compensation}
                         workExperiences={workExperiences}
                         emergencyContacts={emergencyContacts}
+                        employeeEarnings={employeeEarnings}  // ← pass down
                         statusLogs={statusLogs}
                     />
 

@@ -19,10 +19,10 @@ class PositionsController extends Controller
         ]);
     }
 
-    public function create(): Response
-    {
-        return Inertia::render('Positions/Create');
-    }
+    // public function create(): Response
+    // {
+    //     return Inertia::render('Positions/Create');
+    // }
 
     public function store(Request $request): RedirectResponse
     {
@@ -37,12 +37,12 @@ class PositionsController extends Controller
             ->with('success', 'Position created.');
     }
 
-    public function edit(Position $position): Response
-    {
-        return Inertia::render('Positions/Edit', [
-            'position' => $position,
-        ]);
-    }
+    // public function edit(Position $position): Response
+    // {
+    //     return Inertia::render('Positions/Edit', [
+    //         'position' => $position,
+    //     ]);
+    // }
 
     public function update(Request $request, Position $position): RedirectResponse
     {

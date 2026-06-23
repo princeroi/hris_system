@@ -18,6 +18,8 @@ import WorkExperiencePanel    from "./components/WorkExperiencePanel";
 import EmergencyContactsPanel from "./components/EmergencyContactsPanel";
 import CompensationPanel      from "./components/CompensationPanel";
 
+
+import EarningsPanel from "./components/EarningsPanel";
 const GOV_ID_COLS         = ["sss_number", "pagibig_number", "philhealth_number", "tin_number"];
 const CONTRACT_DATE_COLS  = ["contract_date_from", "contract_date_to"];
 const PROBATION_ONLY_COLS = ["regularization_date", "probationary_evaluation_date", "probationary_period_months"];
@@ -136,6 +138,7 @@ export default function BulkUpload({
     existingEmployeeNumbers = [],
     workTimeFactors         = [],
     cellOptions             = {},
+    earnings                = [],
 }) {
     const fileRef = useRef(null);
     const [rows,          setRows         ] = useState([emptyRow()]);
@@ -299,6 +302,11 @@ export default function BulkUpload({
                 Object.keys(fieldErrors).some(k => COMP_FIELDS.has(k))
             ).length;
         }
+        if (tab.special === "earnings") {
+            return rowValidations.filter(({ fieldErrors }) =>
+                Object.keys(fieldErrors).some(k => k.startsWith("employee_earnings["))
+            ).length;
+        }
         if (tab.special === "work_experience") {
             return rowValidations.filter(({ fieldErrors }) =>
                 Object.keys(fieldErrors).some(k => k.startsWith("work_experiences["))
@@ -309,6 +317,7 @@ export default function BulkUpload({
                 Object.keys(fieldErrors).some(k => k.startsWith("emergency_contacts["))
             ).length;
         }
+        
         return 0;
     });
 
@@ -549,6 +558,12 @@ export default function BulkUpload({
                                                         color={hasErr ? "red" : "blue"}
                                                     />
                                                 )}
+                                                {tab.special === "earnings" && (
+                                                    <Pill
+                                                        count={rows.reduce((s, r) => s + (r.employee_earnings?.length ?? 0), 0)}
+                                                        color={hasErr ? "red" : "blue"}
+                                                    />
+                                                )}
                                             </button>
                                         );
                                     })}
@@ -566,6 +581,13 @@ export default function BulkUpload({
                                     onUpdate={setRows}
                                     workTimeFactors={workTimeFactors}
                                     rowValidations={rowValidations}
+                                />
+                            )}
+                            {isSpecial && currentTab.special === "earnings" && (
+                                <EarningsPanel
+                                    rows={rows}
+                                    onUpdate={setRows}
+                                    earnings={earnings}
                                 />
                             )}
                             {isSpecial && currentTab.special === "emergency_contacts" && (

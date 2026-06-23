@@ -16,6 +16,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\EmployeeStatusLog;
 use App\Models\EmployeeOptionGroup;
+use App\Models\Earning;
+use App\Services\OptionService;
 
 class EmployeeController extends Controller
 {
@@ -26,15 +28,12 @@ class EmployeeController extends Controller
         $this->service = $service;
     }
 
-    private function cellOptions(): array
+    private function earnings():array
     {
-        return \DB::table('option_groups')
-            ->join('options', 'option_groups.id', '=', 'options.group_id')
-            ->select('option_groups.group', 'options.value')
-            ->get()
-            ->groupBy('group')
-            ->map(fn($items) => $items->pluck('value')->toArray())
-            ->toArray();
+        return \DB::table('earnings')
+            ->where('is_active', true) 
+            ->orderBy('name')
+            ->get();
     }
 
     public function index()
@@ -101,7 +100,8 @@ class EmployeeController extends Controller
             'departments'     => Department::select('id', 'department_name')->get(),
             'positions'       => Position::select('id', 'position_name')->get(),
             'workTimeFactors' => WorkTimeFactor::select('id', 'factor_name', 'working_days_per_month', 'working_hours_per_day')->get(),
-            'cellOptions' => $this->cellOptions(),
+            'cellOptions' => OptionService::cellOptions(),
+            'earnings' => Earning::active()->get(['id', 'name', 'default_amount']),
         ]);
     }
 
@@ -158,7 +158,8 @@ class EmployeeController extends Controller
             'departments'     => Department::select('id', 'department_name')->get(),
             'positions'       => Position::select('id', 'position_name')->get(),
             'workTimeFactors' => WorkTimeFactor::select('id', 'factor_name', 'working_days_per_month', 'working_hours_per_day')->get(),
-            'cellOptions' => $this->cellOptions(),
+            'cellOptions' => OptionService::cellOptions(),
+            'earnings' => Earning::active()->get(['id', 'name', 'default_amount']),
         ]));
     }
 
@@ -189,7 +190,8 @@ class EmployeeController extends Controller
             'positions'               => Position::select('id', 'position_name')->get(),
             'existingEmployeeNumbers' => Employee::pluck('employee_number'),
             'workTimeFactors'         => WorkTimeFactor::select('id', 'factor_name', 'working_days_per_month', 'working_hours_per_day')->get(),
-            'cellOptions' => $this->cellOptions(),
+            'cellOptions' => OptionService::cellOptions(),
+            'earnings' => Earning::select('id', 'name', 'default_amount')->get(),
         ]);
     }
 
