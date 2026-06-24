@@ -20,42 +20,75 @@ class ProcessScheduledStatusChanges implements ShouldQueue
 
     public function handle(): void
     {
-        $pending = EmployeeStatusLog::with('employee.employmentDetails')
+        $processed = 0;
+        $failed    = 0;
+        $skipped   = 0;
+
+        Log::info('[StatusJob] Starting — checking all unprocessed status changes on or before today (' . now()->toDateString() . ').');
+
+        EmployeeStatusLog::with('employee.employmentDetails')
             ->where('is_processed', false)
             ->whereDate('effective_date', '<=', now()->toDateString())
-            ->get();
+            ->orderBy('effective_date')
+            ->chunkById(100, function ($chunk) use (&$processed, &$failed, &$skipped) {
 
-        if ($pending->isEmpty()) {
-            Log::info('[StatusJob] No pending status changes to process.');
-            return;
-        }
+                foreach ($chunk as $log) {
 
-        Log::info("[StatusJob] Processing {$pending->count()} pending status change(s).");
+                    Log::info("[StatusJob] Checking log #{$log->id} | type: {$log->type} | effective_date: {$log->effective_date} | is_processed: " . ($log->is_processed ? 'true' : 'false'));
 
-        foreach ($pending as $log) {
-            try {
-                DB::transaction(function () use ($log) {
-                    $employee = $log->employee;
+                    try {
+                        DB::transaction(function () use ($log, &$skipped) {
+                            $employee = $log->employee;
 
-                    if (! $employee || ! $employee->employmentDetails) {
-                        Log::warning("[StatusJob] Skipping log #{$log->id}: employee or details missing.");
-                        return;
+                            if (! $employee) {
+                                Log::warning("[StatusJob] Skipping log #{$log->id}: employee not found.");
+                                $skipped++;
+                                return;
+                            }
+
+                            if (! $employee->employmentDetails) {
+                                Log::warning("[StatusJob] Skipping log #{$log->id}: employment details missing for employee #{$employee->id}.");
+                                $skipped++;
+                                return;
+                            }
+
+                            if (empty($log->new_status)) {
+                                Log::warning("[StatusJob] Skipping log #{$log->id}: new_status is empty.");
+                                $skipped++;
+                                return;
+                            }
+
+                            match ($log->type) {
+                                'archive' => $employee->employmentDetails()->update([
+                                    'status' => $log->new_status,
+                                ]),
+                                'rehire' => $employee->employmentDetails()->update([
+                                    'status' => $log->new_status,
+                                ]),
+                                'status_change' => $employee->employmentDetails()->update([
+                                    'status' => $log->new_status,
+                                ]),
+                                default => $employee->employmentDetails()->update([
+                                    'status' => $log->new_status,
+                                ]),
+                            };
+
+                            $log->update([
+                                'is_processed' => true,
+                                'processed_at' => now(),
+                            ]);
+                        });
+
+                        $processed++;
+                        Log::info("[StatusJob] Successfully processed log #{$log->id} | employee #{$log->employee_id} | type: {$log->type} | effective_date: {$log->effective_date} | new_status: {$log->new_status}");
+
+                    } catch (\Throwable $e) {
+                        $failed++;
+                        Log::error("[StatusJob] Failed log #{$log->id} | effective_date: {$log->effective_date} | Error: {$e->getMessage()} | Trace: {$e->getTraceAsString()}");
                     }
+                }
+            });
 
-                    $employee->employmentDetails()->update([
-                        'status' => $log->new_status,
-                    ]);
-
-                    $log->update([
-                        'is_processed' => true,
-                        'processed_at' => now(),
-                    ]);
-
-                    Log::info("[StatusJob] Applied log #{$log->id}: employee #{$employee->id} → {$log->new_status}");
-                });
-            } catch (\Throwable $e) {
-                Log::error("[StatusJob] Failed log #{$log->id}: {$e->getMessage()}");
-            }
-        }
+        Log::info("[StatusJob] Completed | Processed: {$processed} | Failed: {$failed} | Skipped: {$skipped}.");
     }
 }

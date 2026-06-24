@@ -5,9 +5,9 @@ import { Settings2, ArrowLeft, Plus, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/Components/ui/badge";
-import AddOptionModal from "@/Components/EmployeeOptions/AddOptionModal";
-import EditOptionModal from "@/Components/EmployeeOptions/EditOptionModal";
-import DeleteConfirmModal from "@/Components/EmployeeOptions/DeleteConfirmModal";
+import AddOptionModal from "@/Components/Options/AddOptionModal";
+import EditOptionModal from "@/Components/Options/EditOptionModal";
+import DeleteConfirmModal from "@/Components/Options/DeleteConfirmModal";
 
 export default function Show({ group }) {
     const [showAddOption, setShowAddOption] = useState(false);
