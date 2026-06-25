@@ -515,32 +515,24 @@ function CompensationTab({ cp, earnings = [] }) {
                     {/* Table rows */}
                     <div className="divide-y divide-slate-100">
                         {earnings.map((row, i) => {
-                            // earning name comes from the eager-loaded relation or falls back to earning_id
                             const earningName = row.earning?.name ?? `Earning #${row.earning_id}`;
                             return (
                                 <div
                                     key={i}
                                     className="grid grid-cols-12 gap-4 items-center px-5 py-3.5 hover:bg-slate-50/60 transition-colors"
                                 >
-                                    {/* Name */}
                                     <div className="col-span-4">
                                         <p className="text-sm font-medium text-slate-800">{earningName}</p>
                                     </div>
-
-                                    {/* Amount */}
                                     <div className="col-span-2 text-right">
                                         <p className="text-sm font-semibold text-slate-900">
                                             <span className="text-xs font-normal text-slate-400 mr-0.5">₱</span>
                                             {fmtMoney(row.amount)}
                                         </p>
                                     </div>
-
-                                    {/* Frequency */}
                                     <div className="col-span-2 flex justify-center">
                                         <Badge value={row.frequency} colorMap={FREQ_COLORS} />
                                     </div>
-
-                                    {/* Continuous / fixed */}
                                     <div className="col-span-2 flex justify-center">
                                         {row.is_continuous ? (
                                             <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide ring-1 uppercase bg-emerald-50 text-emerald-700 ring-emerald-200">
@@ -552,8 +544,6 @@ function CompensationTab({ cp, earnings = [] }) {
                                             </span>
                                         )}
                                     </div>
-
-                                    {/* Effective / end dates */}
                                     <div className="col-span-2 text-right">
                                         <p className="text-[11px] text-slate-600">{fmtDate(row.effective_date)}</p>
                                         {!row.is_continuous && row.end_date && (
@@ -667,7 +657,7 @@ export default function EmployeeProfile({
     compensation,
     workExperiences,
     emergencyContacts,
-    employeeEarnings = [],  // ← new prop
+    employeeEarnings = [],
     statusLogs = [],
 }) {
     const [activeTab, setActiveTab] = useState("personal");
@@ -684,35 +674,36 @@ export default function EmployeeProfile({
     return (
         <div className="rounded-2xl bg-white ring-1 ring-slate-200 overflow-hidden shadow-sm">
 
-            {/* Tab nav */}
-            <div className="flex items-stretch overflow-x-auto border-b border-slate-100 bg-white px-2 scrollbar-none">
+            {/* Tab nav — full width, each tab gets an equal share */}
+            <div className="flex items-stretch border-b border-slate-100 bg-white overflow-x-auto scrollbar-none">
                 {TABS.map(({ id, label, icon: Icon }) => {
-                    const isActive = activeTab === id;
-                    const showDot  = id === "employment"   && statusLogs.length > 0;
+                    const isActive    = activeTab === id;
+                    const showDot     = id === "employment"   && statusLogs.length > 0;
                     const earningsDot = id === "compensation" && ee.length > 0;
                     return (
                         <button
                             key={id}
                             onClick={() => setActiveTab(id)}
                             className={`
-                                relative inline-flex items-center gap-1.5 whitespace-nowrap
-                                border-b-2 px-4 py-3.5 text-[11px] font-medium
-                                transition-colors duration-150 flex-shrink-0
+                                relative flex flex-1 items-center justify-center gap-1.5
+                                whitespace-nowrap border-b-2 px-3 py-3.5
+                                text-[11px] font-medium transition-colors duration-150
+                                min-w-0
                                 ${isActive
                                     ? "border-slate-900 text-slate-900"
                                     : "border-transparent text-slate-400 hover:text-slate-600"
                                 }
                             `}
                         >
-                            <Icon size={12} strokeWidth={2} />
-                            {label}
+                            <Icon size={12} strokeWidth={2} className="flex-shrink-0" />
+                            <span className="truncate">{label}</span>
                             {showDot && (
-                                <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-orange-100 px-1 text-[9px] font-bold text-orange-600 ring-1 ring-orange-200">
+                                <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-orange-100 px-1 text-[9px] font-bold text-orange-600 ring-1 ring-orange-200 flex-shrink-0">
                                     {statusLogs.length}
                                 </span>
                             )}
                             {earningsDot && (
-                                <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-100 px-1 text-[9px] font-bold text-emerald-600 ring-1 ring-emerald-200">
+                                <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-100 px-1 text-[9px] font-bold text-emerald-600 ring-1 ring-emerald-200 flex-shrink-0">
                                     {ee.length}
                                 </span>
                             )}

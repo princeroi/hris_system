@@ -10,14 +10,24 @@ import Pagination from "@/Components/UI/Pagination";
 import SearchInput from "@/Components/UI/SearchInput";
 import ChangeStatusModal from "@/Components/Employees/ChangeStatusModal";
 import ReassignModal from "@/Components/Employees/ReassignModal";
+import ChangeCompensationModal from "@/Components/Employees/ChangeCompensationModal";
 
 const ITEMS_PER_PAGE = 10;
 
-export default function Index({ employees, stats, companies, branches, departments, positions }) {
+export default function Index({
+  employees,
+  stats,
+  companies,
+  branches,
+  departments,
+  positions,
+  workTimeFactors = [],
+}) {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [statusEmployee, setStatusEmployee] = useState(null);
   const [reassignEmployee, setReassignEmployee] = useState(null);
+  const [compensationEmployee, setCompensationEmployee] = useState(null);
 
   const filtered = searchEmployees(employees, search);
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
@@ -131,6 +141,7 @@ export default function Index({ employees, stats, companies, branches, departmen
                 onDelete={handleDelete}
                 onChangeStatus={(employee) => setStatusEmployee(employee)}
                 onReassign={(employee) => setReassignEmployee(employee)}
+                onChangeCompensation={(employee) => setCompensationEmployee(employee)}
               />
             </div>
 
@@ -172,6 +183,14 @@ export default function Index({ employees, stats, companies, branches, departmen
           departments={departments}
           positions={positions}
           onClose={() => setReassignEmployee(null)}
+        />
+      )}
+
+      {compensationEmployee && (
+        <ChangeCompensationModal
+          employee={compensationEmployee}
+          workTimeFactors={workTimeFactors}
+          onClose={() => setCompensationEmployee(null)}
         />
       )}
 

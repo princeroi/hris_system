@@ -14,6 +14,31 @@ const STATUS_OPTIONS = [
   { value: "contract_end", label: "Contract End" },
 ];
 
+function Spinner() {
+  return (
+    <svg
+      className="h-4 w-4 animate-spin"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="4"
+      />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8v8H4z"
+      />
+    </svg>
+  );
+}
+
 export default function ChangeStatusModal({ employee, onClose }) {
   const today = new Date().toISOString().split("T")[0];
 
@@ -55,7 +80,8 @@ export default function ChangeStatusModal({ employee, onClose }) {
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            disabled={processing}
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <X className="h-4 w-4" />
           </button>
@@ -73,12 +99,13 @@ export default function ChangeStatusModal({ employee, onClose }) {
               name="new_status"
               value={form.new_status}
               onChange={handleChange}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-[#3B5BA5] focus:outline-none focus:ring-2 focus:ring-[#3B5BA5]/20"
+              disabled={processing}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-[#3B5BA5] focus:outline-none focus:ring-2 focus:ring-[#3B5BA5]/20 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <option value="">Select status…</option>
               {STATUS_OPTIONS.filter((opt) => opt.value !== employee.employment_details?.status).map((opt) => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
+              ))}
             </select>
             {errors.new_status && (
               <p className="mt-1 text-xs text-red-500">{errors.new_status}</p>
@@ -95,7 +122,8 @@ export default function ChangeStatusModal({ employee, onClose }) {
               name="effective_date"
               value={form.effective_date}
               onChange={handleChange}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-[#3B5BA5] focus:outline-none focus:ring-2 focus:ring-[#3B5BA5]/20"
+              disabled={processing}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-[#3B5BA5] focus:outline-none focus:ring-2 focus:ring-[#3B5BA5]/20 disabled:opacity-60 disabled:cursor-not-allowed"
             />
             {errors.effective_date && (
               <p className="mt-1 text-xs text-red-500">{errors.effective_date}</p>
@@ -113,7 +141,8 @@ export default function ChangeStatusModal({ employee, onClose }) {
               name="last_working_date"
               value={form.last_working_date}
               onChange={handleChange}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-[#3B5BA5] focus:outline-none focus:ring-2 focus:ring-[#3B5BA5]/20"
+              disabled={processing}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-[#3B5BA5] focus:outline-none focus:ring-2 focus:ring-[#3B5BA5]/20 disabled:opacity-60 disabled:cursor-not-allowed"
             />
           </div>
 
@@ -127,9 +156,10 @@ export default function ChangeStatusModal({ employee, onClose }) {
               name="reason"
               value={form.reason}
               onChange={handleChange}
+              disabled={processing}
               rows={3}
               placeholder="Enter reason for status change…"
-              className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-[#3B5BA5] focus:outline-none focus:ring-2 focus:ring-[#3B5BA5]/20"
+              className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-[#3B5BA5] focus:outline-none focus:ring-2 focus:ring-[#3B5BA5]/20 disabled:opacity-60 disabled:cursor-not-allowed"
             />
           </div>
 
@@ -139,16 +169,24 @@ export default function ChangeStatusModal({ employee, onClose }) {
         <div className="flex justify-end gap-2 border-t border-slate-100 px-6 py-4">
           <button
             onClick={onClose}
-            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            disabled={processing}
+            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={processing}
-            className="rounded-lg bg-[#3B5BA5] px-4 py-2 text-sm font-medium text-white hover:bg-[#33508f] disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-lg bg-[#3B5BA5] px-4 py-2 text-sm font-medium text-white hover:bg-[#33508f] disabled:opacity-60"
           >
-            {processing ? "Saving…" : "Apply Change"}
+            {processing ? (
+              <>
+                <Spinner />
+                Saving…
+              </>
+            ) : (
+              "Apply Change"
+            )}
           </button>
         </div>
 

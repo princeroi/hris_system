@@ -18,6 +18,7 @@ import {
   ArrowLeftRight,
   RotateCcw,
   Shuffle,
+  Coins,
 } from "lucide-react";
 import { getFullName } from "@/utils/employeeUtils";
 import { toUpperCase } from "@/utils/textUtils";
@@ -78,6 +79,7 @@ export default function EmployeeRow({
   onChangeStatus,
   onRehire,
   onReassign,
+  onChangeCompensation,
 }) {
   const employmentDetails = employee.employment_details ?? {};
   const personalInfo      = employee.personal_info      ?? {};
@@ -201,6 +203,14 @@ export default function EmployeeRow({
                 <DropdownMenuItem onClick={() => onChangeStatus(employee)}>
                   <ArrowLeftRight className="mr-2 h-4 w-4" strokeWidth={1.75} />
                   Change Status
+                </DropdownMenuItem>
+              )}
+
+              {/* Change Compensation — active employees only */}
+              {isActive && onChangeCompensation && (
+                <DropdownMenuItem onClick={() => onChangeCompensation(employee)}>
+                  <Coins className="mr-2 h-4 w-4" strokeWidth={1.75} />
+                  Change Compensation
                 </DropdownMenuItem>
               )}
 

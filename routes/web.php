@@ -59,6 +59,8 @@ Route::middleware('auth')->group(function () {
     Route::resource('departments', DepartmentsController::class);
     Route::resource('positions', PositionsController::class);
     Route::resource('earnings', EarningsController::class);
+
+    Route::post('/employees/{employee}/change-compensation', [EmployeeController::class, 'changeCompensation'])->name('employees.change-compensation');
 });
 
 

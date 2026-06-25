@@ -44,6 +44,33 @@ const REGULAR_LIKE = ["regular", "probationary"];
 
 const isRegularLike = (type) => REGULAR_LIKE.includes(type);
 
+// ── Spinner ───────────────────────────────────────────────────────────────────
+
+function Spinner() {
+    return (
+        <svg
+            className="h-4 w-4 animate-spin"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
+        >
+            <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+            />
+            <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v8H4z"
+            />
+        </svg>
+    );
+}
+
 // ── Small reusable components ─────────────────────────────────────────────────
 
 function SectionTitle({ children }) {
@@ -59,11 +86,11 @@ function FieldError({ message }) {
     return <p className="mt-1 text-xs text-red-500">{message}</p>;
 }
 
-function FormSelect({ label, value, onValueChange, placeholder, options, error }) {
+function FormSelect({ label, value, onValueChange, placeholder, options, error, disabled }) {
     return (
         <div className="space-y-1.5">
             <Label>{label}</Label>
-            <Select value={value} onValueChange={onValueChange}>
+            <Select value={value} onValueChange={onValueChange} disabled={disabled}>
                 <SelectTrigger className="w-full">
                     <SelectValue placeholder={placeholder} />
                 </SelectTrigger>
@@ -83,7 +110,7 @@ function FormSelect({ label, value, onValueChange, placeholder, options, error }
     );
 }
 
-function DateField({ label, value, onChange, error, required = false }) {
+function DateField({ label, value, onChange, error, required = false, disabled }) {
     return (
         <div className="space-y-1.5">
             <Label>
@@ -93,6 +120,7 @@ function DateField({ label, value, onChange, error, required = false }) {
                 type="date"
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
+                disabled={disabled}
             />
             <FieldError message={error} />
         </div>
@@ -171,7 +199,6 @@ export default function ReassignModal({
         // Strip fields that are irrelevant to the chosen type so the backend
         // doesn't receive stale defaults.
         if (!typeChanged) {
-            // Type didn't change: don't send any employment-type-specific fields
             delete payload.regularization_date;
             delete payload.probationary_period_months;
             delete payload.probationary_evaluation_date;
@@ -179,7 +206,6 @@ export default function ReassignModal({
             delete payload.contract_date_to;
             delete payload.contract_status;
         } else if (showRegularFields) {
-            // Regular / Probationary: no contract date range
             delete payload.contract_date_from;
             delete payload.contract_date_to;
             if (!showProbationary) {
@@ -187,7 +213,6 @@ export default function ReassignModal({
                 delete payload.probationary_evaluation_date;
             }
         } else if (showContractFields) {
-            // Other types: no regularization / probationary fields
             delete payload.regularization_date;
             delete payload.probationary_period_months;
             delete payload.probationary_evaluation_date;
@@ -235,6 +260,7 @@ export default function ReassignModal({
                                 placeholder="Select company"
                                 options={companyOptions}
                                 error={errors.company_id}
+                                disabled={processing}
                             />
                             <FormSelect
                                 label="Branch"
@@ -243,6 +269,7 @@ export default function ReassignModal({
                                 placeholder="Select branch"
                                 options={branchOptions}
                                 error={errors.branch_id}
+                                disabled={processing}
                             />
                         </div>
                     </div>
@@ -258,6 +285,7 @@ export default function ReassignModal({
                                 placeholder="Select department"
                                 options={departmentOptions}
                                 error={errors.department_id}
+                                disabled={processing}
                             />
                             <FormSelect
                                 label="Position"
@@ -266,6 +294,7 @@ export default function ReassignModal({
                                 placeholder="Select position"
                                 options={positionOptions}
                                 error={errors.position_id}
+                                disabled={processing}
                             />
                         </div>
                     </div>
@@ -282,6 +311,7 @@ export default function ReassignModal({
                                     placeholder="Select type"
                                     options={EMPLOYMENT_TYPES}
                                     error={errors.employment_type}
+                                    disabled={processing}
                                 />
                                 {originalType !== "none" && (
                                     <p className="mt-1 text-xs text-slate-400">
@@ -313,7 +343,6 @@ export default function ReassignModal({
                             </SectionTitle>
                             <div className="grid grid-cols-2 gap-4">
 
-                                {/* Contract Status — shared */}
                                 <FormSelect
                                     label="Contract Status"
                                     value={form.contract_status}
@@ -321,17 +350,17 @@ export default function ReassignModal({
                                     placeholder="Select status"
                                     options={CONTRACT_STATUSES}
                                     error={errors.contract_status}
+                                    disabled={processing}
                                 />
 
-                                {/* Regularization Date — Regular & Probationary */}
                                 <DateField
                                     label="Regularization Date"
                                     value={form.regularization_date}
                                     onChange={(v) => set("regularization_date", v)}
                                     error={errors.regularization_date}
+                                    disabled={processing}
                                 />
 
-                                {/* Probationary-only fields */}
                                 {showProbationary && (
                                     <>
                                         <div className="space-y-1.5">
@@ -349,6 +378,7 @@ export default function ReassignModal({
                                                 onChange={(e) =>
                                                     set("probationary_period_months", e.target.value)
                                                 }
+                                                disabled={processing}
                                             />
                                             <FieldError message={errors.probationary_period_months} />
                                         </div>
@@ -360,6 +390,7 @@ export default function ReassignModal({
                                                 set("probationary_evaluation_date", v)
                                             }
                                             error={errors.probationary_evaluation_date}
+                                            disabled={processing}
                                         />
                                     </>
                                 )}
@@ -373,7 +404,6 @@ export default function ReassignModal({
                             <SectionTitle>Contract Details</SectionTitle>
                             <div className="grid grid-cols-2 gap-4">
 
-                                {/* Contract Status */}
                                 <FormSelect
                                     label="Contract Status"
                                     value={form.contract_status}
@@ -381,9 +411,9 @@ export default function ReassignModal({
                                     placeholder="Select status"
                                     options={CONTRACT_STATUSES}
                                     error={errors.contract_status}
+                                    disabled={processing}
                                 />
 
-                                {/* Spacer */}
                                 <div />
 
                                 <DateField
@@ -391,6 +421,7 @@ export default function ReassignModal({
                                     value={form.contract_date_from}
                                     onChange={(v) => set("contract_date_from", v)}
                                     error={errors.contract_date_from}
+                                    disabled={processing}
                                 />
 
                                 <DateField
@@ -398,6 +429,7 @@ export default function ReassignModal({
                                     value={form.contract_date_to}
                                     onChange={(v) => set("contract_date_to", v)}
                                     error={errors.contract_date_to}
+                                    disabled={processing}
                                 />
                             </div>
                         </div>
@@ -413,6 +445,7 @@ export default function ReassignModal({
                                 onChange={(v) => set("effective_date", v)}
                                 error={errors.effective_date}
                                 required
+                                disabled={processing}
                             />
                             <div className="space-y-1.5">
                                 <Label>Reason</Label>
@@ -421,6 +454,7 @@ export default function ReassignModal({
                                     placeholder="Optional reason..."
                                     value={form.reason}
                                     onChange={(e) => set("reason", e.target.value)}
+                                    disabled={processing}
                                 />
                                 <FieldError message={errors.reason} />
                             </div>
@@ -436,9 +470,16 @@ export default function ReassignModal({
                     <Button
                         onClick={handleSubmit}
                         disabled={processing}
-                        className="bg-[#3B5BA5] hover:bg-[#33508f]"
+                        className="inline-flex items-center gap-2 bg-[#3B5BA5] hover:bg-[#33508f]"
                     >
-                        {processing ? "Saving..." : "Save Reassignment"}
+                        {processing ? (
+                            <>
+                                <Spinner />
+                                Saving…
+                            </>
+                        ) : (
+                            "Save Reassignment"
+                        )}
                     </Button>
                 </DialogFooter>
 

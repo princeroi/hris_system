@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Employee;
 use App\Models\EmployeeStatusLog;
 use App\Models\EmployeeReassignmentLog;
+use App\Models\EmployeeCompensationLog;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -24,6 +25,7 @@ class EmployeeService
                 'employmentDetails.company',
                 'employmentDetails.branch',
                 'personalInfo',
+                'compensation',
             ])
             ->whereHas('employmentDetails', function ($q) {
                 $q->where('status', 'active');
@@ -344,6 +346,66 @@ class EmployeeService
                 'changed_by'                       => Auth::id(),
                 'is_processed'                     => $shouldApplyNow,
                 'processed_at'                     => $shouldApplyNow ? now() : null,
+            ]));
+        });
+    }
+
+    public function changeCompensation(Employee $employee, array $data): \App\Models\EmployeeCompensationLog
+    {
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($employee, $data) {
+    
+            $comp = $employee->compensation; // current EmployeeCompensation record
+    
+            // ── Snapshot previous values ──────────────────────────────────────────
+            $prev = [
+                'prev_work_time_factor_id' => $comp?->work_time_factor_id,
+                'prev_monthly_rate'        => $comp?->monthly_rate,
+                'prev_daily_rate'          => $comp?->daily_rate,
+                'prev_hourly_rate'         => $comp?->hourly_rate,
+                'prev_payroll_type'        => $comp?->payroll_type,
+                'prev_salary_type'         => $comp?->salary_type,
+            ];
+    
+            // ── Build update payload ──────────────────────────────────────────────
+            // Use array_key_exists so we write null intentionally when the user
+            // clears a field, but skip keys the caller never sent at all.
+            $updatable = [
+                'work_time_factor_id',
+                'monthly_rate',
+                'daily_rate',
+                'hourly_rate',
+                'payroll_type',
+                'salary_type',
+            ];
+    
+            $updates = [];
+            foreach ($updatable as $key) {
+                if (array_key_exists($key, $data)) {
+                    $updates[$key] = $data[$key]; // preserves null when explicitly sent
+                }
+            }
+    
+            if (!empty($updates)) {
+                $employee->compensation()->updateOrCreate(
+                    ['employee_id' => $employee->id],
+                    $updates   // NOTE: no changed_by here — that column is on the LOG table only
+                );
+            }
+    
+            // ── Re-fetch so the log captures the actual saved state ───────────────
+            $fresh = $employee->compensation()->first();
+    
+            return \App\Models\EmployeeCompensationLog::create(array_merge($prev, [
+                'employee_id'             => $employee->id,
+                'new_work_time_factor_id' => $fresh?->work_time_factor_id,
+                'new_monthly_rate'        => $fresh?->monthly_rate,
+                'new_daily_rate'          => $fresh?->daily_rate,
+                'new_hourly_rate'         => $fresh?->hourly_rate,
+                'new_payroll_type'        => $fresh?->payroll_type,
+                'new_salary_type'         => $fresh?->salary_type,
+                'effective_date'          => $data['effective_date'],
+                'reason'                  => $data['reason'] ?? null,
+                'changed_by'              => \Illuminate\Support\Facades\Auth::id(),
             ]));
         });
     }

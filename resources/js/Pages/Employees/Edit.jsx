@@ -13,10 +13,9 @@ export default function Edit({
     compensation,
     workExperiences,
     emergencyContacts,
-    employeeEarnings,   // ← destructure the new prop from the controller
+    employeeEarnings,
     cellOptions,
     earnings,
-
     companies,
     branches,
     departments,
@@ -60,7 +59,6 @@ export default function Edit({
                                     ...govIds,
                                     ...bankAccount,
                                     ...compensation,
-                                    // Arrays — always spread as arrays, never undefined
                                     employee_earnings:  employeeEarnings  ?? [],
                                     work_experiences:   workExperiences   ?? [],
                                     emergency_contacts: emergencyContacts ?? [],

@@ -29,10 +29,10 @@ class EmployeeCompensation extends Model
         'is_current'        => 'boolean',
     ];
 
-    // public function employee() : BelongsTo
-    // {
-    //     return $this->belongsTo(Employee::class, 'employee_id', 'id');
-    // }
+    public function employee() : BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'employee_id', 'id');
+    }
 
     public function workTimeFactor() : HasOne 
     {

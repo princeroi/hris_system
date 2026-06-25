@@ -10,7 +10,15 @@ import {
 import { Users } from "lucide-react";
 import EmployeeRow from "./EmployeeRow";
 
-export default function EmployeeTable({ employees, onShow, onDelete, onChangeStatus, onRehire, onReassign }) {
+export default function EmployeeTable({
+  employees,
+  onShow,
+  onDelete,
+  onChangeStatus,
+  onRehire,
+  onReassign,
+  onChangeCompensation,
+}) {
   return (
     <Table>
       <TableHeader>
@@ -53,6 +61,7 @@ export default function EmployeeTable({ employees, onShow, onDelete, onChangeSta
               onChangeStatus={onChangeStatus}
               onRehire={onRehire}
               onReassign={onReassign}
+              onChangeCompensation={onChangeCompensation}
             />
           ))
         ) : (
