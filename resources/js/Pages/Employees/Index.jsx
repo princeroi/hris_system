@@ -11,6 +11,7 @@ import SearchInput from "@/Components/UI/SearchInput";
 import ChangeStatusModal from "@/Components/Employees/ChangeStatusModal";
 import ReassignModal from "@/Components/Employees/ReassignModal";
 import ChangeCompensationModal from "@/Components/Employees/ChangeCompensationModal";
+import AddEarningsModal from "@/Components/Employees/AddEarningsModal";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -22,12 +23,14 @@ export default function Index({
   departments,
   positions,
   workTimeFactors = [],
+  earnings = [],
 }) {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [statusEmployee, setStatusEmployee] = useState(null);
   const [reassignEmployee, setReassignEmployee] = useState(null);
   const [compensationEmployee, setCompensationEmployee] = useState(null);
+  const [earningsEmployee, setEarningsEmployee] = useState(null);
 
   const filtered = searchEmployees(employees, search);
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
@@ -142,6 +145,7 @@ export default function Index({
                 onChangeStatus={(employee) => setStatusEmployee(employee)}
                 onReassign={(employee) => setReassignEmployee(employee)}
                 onChangeCompensation={(employee) => setCompensationEmployee(employee)}
+                onManageEarnings={(employee) => setEarningsEmployee(employee)}
               />
             </div>
 
@@ -191,6 +195,14 @@ export default function Index({
           employee={compensationEmployee}
           workTimeFactors={workTimeFactors}
           onClose={() => setCompensationEmployee(null)}
+        />
+      )}
+
+      {earningsEmployee && (
+        <AddEarningsModal
+          employee={earningsEmployee}
+          earnings={earnings}
+          onClose={() => setEarningsEmployee(null)}
         />
       )}
 

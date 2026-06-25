@@ -19,7 +19,7 @@ class RelieverDuty extends Model
         'branch_id',
         'department_id',
         'position_id',
-        'dates',      // JSON array of YYYY-MM-DD strings
+        'dates',     
         'remarks',
     ];
 

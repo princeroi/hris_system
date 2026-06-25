@@ -19,6 +19,7 @@ import {
   RotateCcw,
   Shuffle,
   Coins,
+  BadgeDollarSign,
 } from "lucide-react";
 import { getFullName } from "@/utils/employeeUtils";
 import { toUpperCase } from "@/utils/textUtils";
@@ -80,6 +81,7 @@ export default function EmployeeRow({
   onRehire,
   onReassign,
   onChangeCompensation,
+  onManageEarnings,
 }) {
   const employmentDetails = employee.employment_details ?? {};
   const personalInfo      = employee.personal_info      ?? {};
@@ -211,6 +213,14 @@ export default function EmployeeRow({
                 <DropdownMenuItem onClick={() => onChangeCompensation(employee)}>
                   <Coins className="mr-2 h-4 w-4" strokeWidth={1.75} />
                   Change Compensation
+                </DropdownMenuItem>
+              )}
+
+              {/* Manage Earnings — active employees only */}
+              {isActive && onManageEarnings && (
+                <DropdownMenuItem onClick={() => onManageEarnings(employee)}>
+                  <BadgeDollarSign className="mr-2 h-4 w-4" strokeWidth={1.75} />
+                  Manage Earnings
                 </DropdownMenuItem>
               )}
 

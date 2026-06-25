@@ -18,6 +18,7 @@ export default function EmployeeTable({
   onRehire,
   onReassign,
   onChangeCompensation,
+  onManageEarnings,
 }) {
   return (
     <Table>
@@ -62,6 +63,7 @@ export default function EmployeeTable({
               onRehire={onRehire}
               onReassign={onReassign}
               onChangeCompensation={onChangeCompensation}
+              onManageEarnings={onManageEarnings}
             />
           ))
         ) : (

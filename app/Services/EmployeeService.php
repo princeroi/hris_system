@@ -26,6 +26,7 @@ class EmployeeService
                 'employmentDetails.branch',
                 'personalInfo',
                 'compensation',
+                'employeeEarnings'
             ])
             ->whereHas('employmentDetails', function ($q) {
                 $q->where('status', 'active');
@@ -69,7 +70,7 @@ class EmployeeService
             'compensation',
             'workExperience',
             'emergencyContacts',
-            'employeeEarnings',   // ← load earnings rows
+            'employeeEarnings',   
         ])->findOrFail($id);
 
         return [
@@ -408,6 +409,15 @@ class EmployeeService
                 'changed_by'              => \Illuminate\Support\Facades\Auth::id(),
             ]));
         });
+    }
+
+    public function manageEarnings(Employee $employee, array $data): void
+    {
+        $employee->employeeEarnings()->delete();
+    
+        foreach ($data['employee_earnings'] ?? [] as $entry) {
+            $employee->employeeEarnings()->create($this->employeeEarningData($entry));
+        }
     }
 
     // ─── Private data mappers ─────────────────────────────────────────────────
