@@ -17,6 +17,7 @@ use App\Http\Controllers\EarningsController;
 use App\Http\Controllers\RelieverDutyController;
 use App\Http\Controllers\EmployeeCompensationController;
 use App\Http\Controllers\EmployeeEarningsController;
+use App\Http\Controllers\UserController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -68,6 +69,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/employees/{employee}/earnings', [EmployeeEarningsController::class, 'store'])->name('employees.manageEarnings');
 
     Route::resource('reliever-duties', RelieverDutyController::class);
+    Route::resource('users', UserController::class);
 });
 
 

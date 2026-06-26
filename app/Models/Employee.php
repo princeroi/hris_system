@@ -94,4 +94,9 @@ class Employee extends Model
     {
         return $this->hasMany(EmployeeEarning::class);
     }
+
+    public function user(): HasOne
+    {
+        return $this->hasOne(User::class, 'employee_id');
+    }
 }

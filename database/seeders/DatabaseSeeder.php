@@ -32,6 +32,7 @@ class DatabaseSeeder extends Seeder
             EmployeeCompensationSeeder::class,
             EmployeeDocumentsSeeder::class,
             EmployeeOptionsSeeder::class,
+            RolePermissionSeeder::class,
         ]);
         // User::factory(10)->create();
 

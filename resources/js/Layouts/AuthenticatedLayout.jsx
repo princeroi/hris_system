@@ -66,11 +66,25 @@ const ArrowsUpDownIcon = () => (
     </svg>
 );
 
-// Reliever / shield icon
 const ShieldIcon = () => (
     <svg className="h-[15px] w-[15px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
         <path strokeLinecap="round" strokeLinejoin="round"
             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+);
+
+// 👇 New icon for user management
+const UserManageIcon = () => (
+    <svg className="h-[15px] w-[15px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round"
+            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+);
+
+const UserAddIcon = () => (
+    <svg className="h-[15px] w-[15px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round"
+            d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
     </svg>
 );
 
@@ -405,7 +419,6 @@ export default function AuthenticatedLayout({ header, children }) {
 
             <div className="flex h-screen overflow-hidden" style={{ background: 'var(--c-bg)' }}>
 
-                {/* Mobile overlay */}
                 {sidebarOpen && (
                     <div
                         className="overlay-fade fixed inset-0 z-20 lg:hidden"
@@ -414,7 +427,6 @@ export default function AuthenticatedLayout({ header, children }) {
                     />
                 )}
 
-                {/* ── Sidebar ── */}
                 <aside
                     className={[
                         'fixed inset-y-0 left-0 z-30 flex h-full flex-col lg:static lg:h-screen',
@@ -427,7 +439,6 @@ export default function AuthenticatedLayout({ header, children }) {
                         transition: 'transform 0.22s cubic-bezier(0.4,0,0.2,1)',
                     }}
                 >
-                    {/* Logo row */}
                     <div
                         className="flex h-[var(--topbar-h)] shrink-0 items-center justify-between px-5"
                         style={{ borderBottom: '1px solid var(--c-border)' }}
@@ -450,7 +461,6 @@ export default function AuthenticatedLayout({ header, children }) {
                         </button>
                     </div>
 
-                    {/* Navigation */}
                     <nav className="no-scrollbar flex-1 overflow-y-auto px-3 py-4">
 
                         {/* ── Main ── */}
@@ -587,6 +597,28 @@ export default function AuthenticatedLayout({ header, children }) {
                             </CollapsibleNavItem>
                         </div>
 
+                        <div className="nav-divider" />
+
+                        {/* ── Access Control ── 👇 NEW */}
+                        <span className="nav-group-label">Access Control</span>
+                        <div className="flex flex-col gap-0.5 mb-1">
+                            <CollapsibleNavItem
+                                label="Users"
+                                icon={<UserManageIcon />}
+                                activePrefixes={['users']}
+                                closeSidebar={closeSidebar}
+                            >
+                                <Link
+                                    href={route('users.index')}
+                                    onClick={closeSidebar}
+                                    className={`nav-sub-link${isActive('users.index') || (isActive('users') && !isActive('users.create')) ? ' active' : ''}`}
+                                >
+                                    <span className="nav-icon"><UserManageIcon /></span>
+                                    <span>All Users</span>
+                                </Link>
+                            </CollapsibleNavItem>
+                        </div>
+
                     </nav>
 
                     {/* User footer */}
@@ -627,8 +659,6 @@ export default function AuthenticatedLayout({ header, children }) {
 
                 {/* ── Main column ── */}
                 <div className="flex h-screen flex-1 flex-col min-w-0 overflow-hidden">
-
-                    {/* Desktop topbar */}
                     <div
                         className="hidden lg:flex h-[var(--topbar-h)] shrink-0 items-center px-7"
                         style={{ background: 'var(--c-surface)', borderBottom: '1px solid var(--c-border)' }}
@@ -636,7 +666,6 @@ export default function AuthenticatedLayout({ header, children }) {
                         {header && <div className="flex-1">{header}</div>}
                     </div>
 
-                    {/* Mobile topbar */}
                     <div
                         className="sticky top-0 z-10 flex h-[var(--topbar-h)] shrink-0 items-center gap-3 px-4 lg:hidden"
                         style={{ background: 'var(--c-surface)', borderBottom: '1px solid var(--c-border)' }}
@@ -659,7 +688,6 @@ export default function AuthenticatedLayout({ header, children }) {
                         </Link>
                     </div>
 
-                    {/* Mobile page header */}
                     {header && (
                         <header
                             className="px-5 py-3.5 lg:hidden"
@@ -669,7 +697,6 @@ export default function AuthenticatedLayout({ header, children }) {
                         </header>
                     )}
 
-                    {/* Page content */}
                     <main className="no-scrollbar flex-1 overflow-y-auto">
                         {children}
                     </main>
