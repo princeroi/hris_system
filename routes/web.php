@@ -14,6 +14,10 @@ use App\Http\Controllers\CompanyBranchesController;
 use App\Http\Controllers\DepartmentsController;
 use App\Http\Controllers\PositionsController;
 use App\Http\Controllers\EarningsController;
+use App\Http\Controllers\RelieverDutyController;
+use App\Http\Controllers\EmployeeCompensationController;
+use App\Http\Controllers\EmployeeEarningsController;
+
 Route::get('/', function () {
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
@@ -60,8 +64,10 @@ Route::middleware('auth')->group(function () {
     Route::resource('positions', PositionsController::class);
     Route::resource('earnings', EarningsController::class);
 
-    Route::post('/employees/{employee}/change-compensation', [EmployeeController::class, 'changeCompensation'])->name('employees.change-compensation');
-    Route::post('/employees/{employee}/earnings', [EmployeeController::class, 'manageEarnings'])->name('employees.manageEarnings');
+    Route::post('/employees/{employee}/change-compensation', [EmployeeCompensationController::class, 'store'])->name('employees.change-compensation');
+    Route::post('/employees/{employee}/earnings', [EmployeeEarningsController::class, 'store'])->name('employees.manageEarnings');
+
+    Route::resource('reliever-duties', RelieverDutyController::class);
 });
 
 

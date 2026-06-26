@@ -27,6 +27,8 @@ class EmployeeCompensationLog extends Model
         'effective_date',
         'reason',
         'changed_by',
+        'is_processed',  
+        'processed_at',  
     ];
 
     protected $casts = [
@@ -34,7 +36,8 @@ class EmployeeCompensationLog extends Model
         'daily_rate'     => 'decimal:2',
         'hourly_rate'    => 'decimal:2',
         'effective_date' => 'date',
-        'is_current'     => 'boolean',
+        'is_processed'      => 'boolean',  
+        'processed_at'      => 'datetime',  
     ];
 
     public function employee(): BelongsTo
@@ -50,5 +53,12 @@ class EmployeeCompensationLog extends Model
     public function changedBy(): BelongsTo
     {
         return $this->belongsTo(\App\Models\User::class, 'changed_by');
+    }
+    
+    public function scopePendingToday($query)
+    {
+        return $query
+            ->where('is_processed', false)
+            ->whereDate('effective_date', '<=', now()->toDateString());
     }
 }

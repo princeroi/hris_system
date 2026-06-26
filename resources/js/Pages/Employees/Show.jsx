@@ -47,8 +47,12 @@ export default function Show({
     compensation,
     workExperiences,
     emergencyContacts,
-    employeeEarnings = [],   // ← new prop
+    employeeEarnings = [],   
     statusLogs = [],
+    reassignmentLogs = [],   
+    compensationLogs = [],   
+    earningLogs = [],        
+    relieverDuties = [],     
 }) {
     const status = employmentDetails?.status ?? "unknown";
 
@@ -153,8 +157,12 @@ export default function Show({
                         compensation={compensation}
                         workExperiences={workExperiences}
                         emergencyContacts={emergencyContacts}
-                        employeeEarnings={employeeEarnings}  // ← pass down
+                        employeeEarnings={employeeEarnings}  
                         statusLogs={statusLogs}
+                        reassignmentLogs={reassignmentLogs}   
+                    compensationLogs={compensationLogs}   
+                    earningLogs={earningLogs}             
+                    relieverDuties={relieverDuties}       
                     />
 
                 </div>

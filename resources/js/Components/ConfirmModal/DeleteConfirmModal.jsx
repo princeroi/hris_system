@@ -1,4 +1,4 @@
-// resources/js/Components/Companies/DeleteConfirmModal.jsx
+// resources/js/Components/ConfirmModal/DeleteConfirmModal.jsx
 import {
     Dialog,
     DialogContent,
@@ -33,10 +33,10 @@ export default function DeleteConfirmModal({
                 </DialogHeader>
 
                 <DialogFooter className="gap-2 pt-2">
-                    <Button type="button" variant="outline" onClick={onClose}>
+                    <Button type="button" variant="info-outline" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button type="button" variant="destructive" onClick={onConfirm}>
+                    <Button type="button" variant="danger" onClick={onConfirm}>
                         Delete
                     </Button>
                 </DialogFooter>

@@ -41,7 +41,7 @@ export default function DepartmentFormModal({ open, onClose, department }) {
 
     return (
         <Dialog open={open} onOpenChange={handleClose}>
-            <DialogContent className="sm:max-w-lg">
+            <DialogContent aria-describedby={undefined} className="sm:max-w-lg">
                 <DialogHeader>
                     <DialogTitle>
                         {isEditing ? "Edit Department" : "New Department"}
@@ -64,13 +64,14 @@ export default function DepartmentFormModal({ open, onClose, department }) {
                     </div>
 
                     <DialogFooter className="gap-2 pt-2">
-                        <Button type="button" variant="outline" onClick={handleClose}>
+                        <Button type="button" variant="info-outline" onClick={handleClose}>
                             Cancel
                         </Button>
                         <Button
                             type="submit"
                             disabled={processing}
-                            className="bg-[#3B5BA5] hover:bg-[#2f4a8c] text-white"
+                            variant="info"
+                            
                         >
                             {processing
                                 ? isEditing ? "Saving…" : "Creating…"

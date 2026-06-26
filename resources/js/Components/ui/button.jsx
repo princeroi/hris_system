@@ -18,15 +18,12 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        // ── Solid brand blue (default) ───────────────────────────────
         default: [
           "bg-[#1D4ED8] text-white border-transparent",
           "hover:bg-[#1E40AF]",
           "active:bg-[#1E3A8A]",
           "shadow-sm shadow-blue-900/20",
         ].join(" "),
-
-        // ── Blue-bordered outline ────────────────────────────────────
         outline: [
           "border-[#BFDBFE] bg-white text-[#1D4ED8]",
           "hover:bg-[#EFF6FF] hover:border-[#93C5FD]",
@@ -34,23 +31,17 @@ const buttonVariants = cva(
           "dark:border-[#1E3A6E] dark:bg-[#0F1E3D]/40 dark:text-[#93C5FD]",
           "dark:hover:bg-[#1E3A6E]/60",
         ].join(" "),
-
-        // ── Soft blue fill ───────────────────────────────────────────
         secondary: [
           "bg-[#DBEAFE] text-[#1E3A6E] border-transparent",
           "hover:bg-[#BFDBFE]",
           "aria-expanded:bg-[#DBEAFE]",
         ].join(" "),
-
-        // ── No border, blue text on hover ────────────────────────────
         ghost: [
           "text-[#374151]",
           "hover:bg-[#EFF6FF] hover:text-[#1D4ED8]",
           "aria-expanded:bg-[#EFF6FF] aria-expanded:text-[#1D4ED8]",
           "dark:hover:bg-[#1E3A6E]/50 dark:hover:text-[#93C5FD]",
         ].join(" "),
-
-        // ── Destructive ──────────────────────────────────────────────
         destructive: [
           "bg-red-50 text-red-600 border-transparent",
           "hover:bg-red-100",
@@ -58,8 +49,6 @@ const buttonVariants = cva(
           "dark:bg-red-900/20 dark:text-red-400",
           "dark:hover:bg-red-900/30",
         ].join(" "),
-
-        // ── Success ──────────────────────────────────────────────────
         success: [
           "bg-emerald-600 text-white border-transparent",
           "hover:bg-emerald-700",
@@ -68,8 +57,6 @@ const buttonVariants = cva(
           "focus-visible:border-emerald-400 focus-visible:ring-emerald-300/50",
           "dark:bg-emerald-500 dark:hover:bg-emerald-600",
         ].join(" "),
-
-        // ── Success outline ──────────────────────────────────────────
         "success-outline": [
           "border-emerald-200 bg-white text-emerald-700",
           "hover:bg-emerald-50 hover:border-emerald-300",
@@ -77,8 +64,6 @@ const buttonVariants = cva(
           "dark:border-emerald-800 dark:bg-transparent dark:text-emerald-400",
           "dark:hover:bg-emerald-900/30",
         ].join(" "),
-
-        // ── Warning ──────────────────────────────────────────────────
         warning: [
           "bg-amber-400 text-amber-900 border-transparent",
           "hover:bg-amber-500",
@@ -87,8 +72,6 @@ const buttonVariants = cva(
           "focus-visible:border-amber-400 focus-visible:ring-amber-300/50",
           "dark:bg-amber-500 dark:text-amber-950 dark:hover:bg-amber-400",
         ].join(" "),
-
-        // ── Warning outline ──────────────────────────────────────────
         "warning-outline": [
           "border-amber-200 bg-white text-amber-700",
           "hover:bg-amber-50 hover:border-amber-300",
@@ -96,8 +79,6 @@ const buttonVariants = cva(
           "dark:border-amber-700 dark:bg-transparent dark:text-amber-400",
           "dark:hover:bg-amber-900/30",
         ].join(" "),
-
-        // ── Danger (solid red) ───────────────────────────────────────
         danger: [
           "bg-red-600 text-white border-transparent",
           "hover:bg-red-700",
@@ -106,18 +87,14 @@ const buttonVariants = cva(
           "focus-visible:border-red-400 focus-visible:ring-red-300/50",
           "dark:bg-red-500 dark:hover:bg-red-600",
         ].join(" "),
-
-        // ── Info ─────────────────────────────────────────────────────
         info: [
-          "bg-sky-500 text-white border-transparent",
-          "hover:bg-sky-600",
-          "active:bg-sky-700",
-          "shadow-sm shadow-sky-900/20",
-          "focus-visible:border-sky-400 focus-visible:ring-sky-300/50",
-          "dark:bg-sky-500 dark:hover:bg-sky-400",
+          "bg-blue-600 text-white border-transparent",
+          "hover:bg-blue-700",
+          "active:bg-blue-800",
+          "shadow-sm shadow-blue-900/20",
+          "focus-visible:border-blue-500 focus-visible:ring-blue-400/50",
+          "dark:bg-blue-600 dark:hover:bg-blue-500",
         ].join(" "),
-
-        // ── Info outline ─────────────────────────────────────────────
         "info-outline": [
           "border-sky-200 bg-white text-sky-700",
           "hover:bg-sky-50 hover:border-sky-300",
@@ -125,14 +102,11 @@ const buttonVariants = cva(
           "dark:border-sky-700 dark:bg-transparent dark:text-sky-400",
           "dark:hover:bg-sky-900/30",
         ].join(" "),
-
-        // ── Link ─────────────────────────────────────────────────────
         link: [
           "text-[#1D4ED8] underline-offset-4",
           "hover:underline hover:text-[#1E40AF]",
         ].join(" "),
       },
-
       size: {
         default:   "h-9 gap-1.5 px-4 text-sm has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3",
         xs:        "h-6 gap-1 rounded-md px-2.5 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&_svg:not([class*='size-'])]:size-3",
@@ -151,17 +125,15 @@ const buttonVariants = cva(
   }
 )
 
-function Button({
-  className,
-  variant = "default",
-  size = "default",
-  asChild = false,
-  ...props
-}) {
+const Button = React.forwardRef(function Button(
+  { className, variant = "default", size = "default", asChild = false, ...props },
+  ref
+) {
   const Comp = asChild ? Slot.Root : "button"
 
   return (
     <Comp
+      ref={ref}
       data-slot="button"
       data-variant={variant}
       data-size={size}
@@ -169,6 +141,8 @@ function Button({
       {...props}
     />
   )
-}
+})
+
+Button.displayName = "Button"
 
 export { Button, buttonVariants }

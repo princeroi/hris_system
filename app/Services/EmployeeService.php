@@ -9,6 +9,7 @@ use App\Models\EmployeeCompensationLog;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Models\EmployeeEarningLog;
 
 class EmployeeService
 {
@@ -351,13 +352,12 @@ class EmployeeService
         });
     }
 
-    public function changeCompensation(Employee $employee, array $data): \App\Models\EmployeeCompensationLog
+    public function changeCompensation(Employee $employee, array $data): EmployeeCompensationLog
     {
-        return \Illuminate\Support\Facades\DB::transaction(function () use ($employee, $data) {
-    
-            $comp = $employee->compensation; // current EmployeeCompensation record
-    
-            // ── Snapshot previous values ──────────────────────────────────────────
+        return DB::transaction(function () use ($employee, $data) {
+
+            $comp = $employee->compensation;
+
             $prev = [
                 'prev_work_time_factor_id' => $comp?->work_time_factor_id,
                 'prev_monthly_rate'        => $comp?->monthly_rate,
@@ -366,37 +366,29 @@ class EmployeeService
                 'prev_payroll_type'        => $comp?->payroll_type,
                 'prev_salary_type'         => $comp?->salary_type,
             ];
-    
-            // ── Build update payload ──────────────────────────────────────────────
-            // Use array_key_exists so we write null intentionally when the user
-            // clears a field, but skip keys the caller never sent at all.
-            $updatable = [
-                'work_time_factor_id',
-                'monthly_rate',
-                'daily_rate',
-                'hourly_rate',
-                'payroll_type',
-                'salary_type',
-            ];
-    
+
+            $updatable = ['work_time_factor_id', 'monthly_rate', 'daily_rate', 'hourly_rate', 'payroll_type', 'salary_type'];
+
             $updates = [];
             foreach ($updatable as $key) {
                 if (array_key_exists($key, $data)) {
-                    $updates[$key] = $data[$key]; // preserves null when explicitly sent
+                    $updates[$key] = $data[$key];
                 }
             }
-    
-            if (!empty($updates)) {
+
+            // ── declare it here ───────────────────────────────────────────────────
+            $shouldApplyNow = Carbon::parse($data['effective_date'])->startOfDay()->lte(now()->startOfDay());
+
+            if ($shouldApplyNow && !empty($updates)) {
                 $employee->compensation()->updateOrCreate(
                     ['employee_id' => $employee->id],
-                    $updates   // NOTE: no changed_by here — that column is on the LOG table only
+                    $updates
                 );
             }
-    
-            // ── Re-fetch so the log captures the actual saved state ───────────────
+
             $fresh = $employee->compensation()->first();
-    
-            return \App\Models\EmployeeCompensationLog::create(array_merge($prev, [
+
+            return EmployeeCompensationLog::create(array_merge($prev, [
                 'employee_id'             => $employee->id,
                 'new_work_time_factor_id' => $fresh?->work_time_factor_id,
                 'new_monthly_rate'        => $fresh?->monthly_rate,
@@ -406,18 +398,105 @@ class EmployeeService
                 'new_salary_type'         => $fresh?->salary_type,
                 'effective_date'          => $data['effective_date'],
                 'reason'                  => $data['reason'] ?? null,
-                'changed_by'              => \Illuminate\Support\Facades\Auth::id(),
+                'changed_by'              => Auth::id(),
+                'is_processed'            => $shouldApplyNow,
+                'processed_at'            => $shouldApplyNow ? now() : null,
             ]));
         });
     }
 
     public function manageEarnings(Employee $employee, array $data): void
     {
-        $employee->employeeEarnings()->delete();
-    
-        foreach ($data['employee_earnings'] ?? [] as $entry) {
-            $employee->employeeEarnings()->create($this->employeeEarningData($entry));
-        }
+        DB::transaction(function () use ($employee, $data) {
+
+            $employee->load('employeeEarnings');
+            $existing    = $employee->employeeEarnings->keyBy('earning_id');
+            $incomingIds = collect($data['employee_earnings'] ?? [])->pluck('earning_id');
+
+            // ── ADDED or UPDATED ──────────────────────────────────────────────────
+            foreach ($data['employee_earnings'] ?? [] as $entry) {
+                $earningId      = $entry['earning_id'];
+                $effectiveDate  = $entry['effective_date'];
+                $shouldApplyNow = Carbon::parse($effectiveDate)->startOfDay()->lte(now()->startOfDay());
+                $current        = $existing->get($earningId);
+
+                if ($current) {
+                    $changed = $current->amount    != $entry['amount']
+                            || $current->frequency != ($entry['frequency'] ?? 'monthly');
+
+                    if (!$changed) {
+                        continue;
+                    }
+
+                    EmployeeEarningLog::create([
+                        'employee_id'    => $employee->id,
+                        'earning_id'     => $earningId,
+                        'action'         => 'updated',
+                        'prev_amount'    => $current->amount,
+                        'prev_frequency' => $current->frequency,
+                        'new_amount'     => $entry['amount'],
+                        'new_frequency'  => $entry['frequency'] ?? 'monthly',
+                        'effective_date' => $effectiveDate,
+                        'changed_by'     => Auth::id(),
+                        'is_processed'   => $shouldApplyNow,
+                        'processed_at'   => $shouldApplyNow ? now() : null,
+                    ]);
+
+                    if ($shouldApplyNow) {
+                        $current->update([
+                            'amount'        => $entry['amount'],
+                            'frequency'     => $entry['frequency']     ?? 'monthly',
+                            'is_continuous' => $entry['is_continuous'] ?? true,
+                            'effective_date'=> $effectiveDate,
+                            'end_date'      => ($entry['is_continuous'] ?? true) ? null : ($entry['end_date'] ?? null),
+                        ]);
+                    }
+
+                } else {
+                    EmployeeEarningLog::create([
+                        'employee_id'    => $employee->id,
+                        'earning_id'     => $earningId,
+                        'action'         => 'added',
+                        'prev_amount'    => null,
+                        'prev_frequency' => null,
+                        'new_amount'     => $entry['amount'],
+                        'new_frequency'  => $entry['frequency'] ?? 'monthly',
+                        'effective_date' => $effectiveDate,
+                        'changed_by'     => Auth::id(),
+                        'is_processed'   => $shouldApplyNow,
+                        'processed_at'   => $shouldApplyNow ? now() : null,
+                    ]);
+
+                    if ($shouldApplyNow) {
+                        $employee->employeeEarnings()->create(
+                            $this->employeeEarningData($entry)
+                        );
+                    }
+                }
+            }
+
+            // ── REMOVED ───────────────────────────────────────────────────────────
+            $removedRows = $existing->whereNotIn('earning_id', $incomingIds->toArray());
+
+            foreach ($removedRows as $removed) {
+                // Removed earnings apply immediately
+                EmployeeEarningLog::create([
+                    'employee_id'    => $employee->id,
+                    'earning_id'     => $removed->earning_id,
+                    'action'         => 'removed',
+                    'prev_amount'    => $removed->amount,
+                    'prev_frequency' => $removed->frequency,
+                    'new_amount'     => null,
+                    'new_frequency'  => null,
+                    'effective_date' => now()->toDateString(),
+                    'changed_by'     => Auth::id(),
+                    'is_processed'   => true,
+                    'processed_at'   => now(),
+                ]);
+
+                $removed->delete();
+            }
+        });
     }
 
     // ─── Private data mappers ─────────────────────────────────────────────────

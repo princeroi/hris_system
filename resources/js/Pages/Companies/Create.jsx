@@ -20,9 +20,20 @@ export default function Create() {
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-slate-800">
-                    Companies
-                </h2>
+                <div className="flex items-center gap-3">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => router.visit("/companies")}
+                        className="text-[#1E40AF] hover:text-[#1E3A8A] hover:bg-[#EFF6FF]"
+                    >
+                        ← Back
+                    </Button>
+                    <div className="w-px h-5 bg-[#BFDBFE]" />
+                    <h2 className="text-xl font-semibold leading-tight text-slate-800">
+                        Companies
+                    </h2>
+                </div>
             }
         >
             <Head title="New Company" />
@@ -31,14 +42,6 @@ export default function Create() {
                 <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8">
 
                     <div className="mb-6 flex items-center gap-3">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-9 w-9 text-slate-500 hover:text-slate-800"
-                            onClick={() => router.visit(route("companies.index"))}
-                        >
-                            <ArrowLeft className="h-5 w-5" strokeWidth={1.75} />
-                        </Button>
                         <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#3B5BA5]/10">
                             <Building2 className="h-5 w-5 text-[#3B5BA5]" strokeWidth={1.75} />
                         </div>

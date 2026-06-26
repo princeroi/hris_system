@@ -46,7 +46,7 @@ export default function Index({ positions }) {
                         </div>
                         <Button
                             onClick={() => setShowCreate(true)}
-                            className="inline-flex items-center gap-2 bg-[#3B5BA5] hover:bg-[#2f4a8c] text-white"
+                            variant="info"
                         >
                             <Plus className="h-4 w-4" strokeWidth={1.75} />
                             New Position

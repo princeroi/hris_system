@@ -12,6 +12,7 @@ import ChangeStatusModal from "@/Components/Employees/ChangeStatusModal";
 import ReassignModal from "@/Components/Employees/ReassignModal";
 import ChangeCompensationModal from "@/Components/Employees/ChangeCompensationModal";
 import AddEarningsModal from "@/Components/Employees/AddEarningsModal";
+import { Button } from "@/components/ui/button";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -119,20 +120,20 @@ export default function Index({
               </div>
 
               <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
-                <button
+                <Button
                   onClick={() => router.visit("/employees/bulk-upload")}
-                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
+                  variant="info-outline"
                 >
                   <Upload className="h-4 w-4" strokeWidth={1.75} />
                   Bulk upload
-                </button>
-                <Link
-                  href="/employees/create"
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#3B5BA5] px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#33508f]"
+                </Button>
+                <Button
+                  onClick={() => router.visit("/employees/create")}
+                  variant="info"
                 >
                   <Plus className="h-4 w-4" strokeWidth={1.75} />
                   Add employee
-                </Link>
+                </Button>
               </div>
             </div>
 

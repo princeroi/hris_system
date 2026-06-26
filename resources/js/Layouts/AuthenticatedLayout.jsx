@@ -53,7 +53,6 @@ const SlidersIcon = () => (
     </svg>
 );
 
-// Coins icon for Earnings & Deductions
 const CoinsIcon = () => (
     <svg className="h-[15px] w-[15px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
         <path strokeLinecap="round" strokeLinejoin="round"
@@ -61,10 +60,17 @@ const CoinsIcon = () => (
     </svg>
 );
 
-// Arrow up-down icon for Earnings sub-item
 const ArrowsUpDownIcon = () => (
     <svg className="h-[13px] w-[13px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" />
+    </svg>
+);
+
+// Reliever / shield icon
+const ShieldIcon = () => (
+    <svg className="h-[15px] w-[15px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round"
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
     </svg>
 );
 
@@ -184,16 +190,16 @@ export default function AuthenticatedLayout({ header, children }) {
                     --c-border:      #E8EAF0;
                     --c-border-mid:  #D1D5E4;
 
-                    --c-accent:      #4F46E5;
+                    --c-accent:      #2563EB;
                     --c-accent-2:    #6366F1;
-                    --c-accent-dim:  #EEF2FF;
-                    --c-accent-ring: #C7D2FE;
+                    --c-accent-dim:  #DBEAFE;
+                    --c-accent-ring: #93C5FD;
 
                     --c-text-1:      #111827;
                     --c-text-2:      #4B5563;
-                    --c-text-3:      #9CA3AF;
+                    --c-text-3:      #3B82F6;
 
-                    --sidebar-w:     220px;
+                    --sidebar-w:     250px;
                     --topbar-h:      56px;
                     --radius-sm:     6px;
                     --radius-md:     8px;
@@ -486,6 +492,21 @@ export default function AuthenticatedLayout({ header, children }) {
 
                         <div className="nav-divider" />
 
+                        {/* ── Scheduling ── */}
+                        <span className="nav-group-label">Scheduling</span>
+                        <div className="flex flex-col gap-0.5 mb-1">
+                            <Link
+                                href={route('reliever-duties.index')}
+                                onClick={closeSidebar}
+                                className={`nav-link${isActive('reliever-duties') ? ' active' : ''}`}
+                            >
+                                <span className="nav-icon"><ShieldIcon /></span>
+                                <span>Reliever Duties</span>
+                            </Link>
+                        </div>
+
+                        <div className="nav-divider" />
+
                         {/* ── Organization ── */}
                         <span className="nav-group-label">Organization</span>
                         <div className="flex flex-col gap-0.5 mb-1">
@@ -541,15 +562,6 @@ export default function AuthenticatedLayout({ header, children }) {
                                     <span className="nav-icon"><ArrowsUpDownIcon /></span>
                                     <span>Earnings</span>
                                 </Link>
-                                {/* Deductions — add when ready */}
-                                {/* <Link
-                                    href={route('deductions.index')}
-                                    onClick={closeSidebar}
-                                    className={`nav-sub-link${isActive('deductions') ? ' active' : ''}`}
-                                >
-                                    <span className="nav-icon"><ArrowsUpDownIcon /></span>
-                                    <span>Deductions</span>
-                                </Link> */}
                             </CollapsibleNavItem>
                         </div>
 

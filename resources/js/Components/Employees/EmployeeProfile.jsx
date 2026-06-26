@@ -7,6 +7,7 @@ import {
     BanknoteIcon, FileText, ArrowLeftRight, RotateCcw,
 } from "lucide-react";
 import { fmtDate, fmtDateTime } from "@/utils/dateUtils";
+import { TrendingUp, CalendarDays as CalIcon } from "lucide-react";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -251,6 +252,8 @@ const TABS = [
     { id: "compensation", label: "Compensation", icon: Coins },
     { id: "experience",   label: "Experience",   icon: Clock },
     { id: "emergency",    label: "Emergency",    icon: AlertCircle },
+    { id: "reassignment", label: "Reassignments", icon: ArrowLeftRight },  
+    { id: "reliever",     label: "Reliever Duties", icon: CalendarDays },  
 ];
 
 // ─── Tab panels ───────────────────────────────────────────────────────────────
@@ -476,7 +479,7 @@ function BankTab({ ba }) {
 
 // ─── Compensation tab ─────────────────────────────────────────────────────────
 
-function CompensationTab({ cp, earnings = [] }) {
+function CompensationTab({ cp, earnings = [], compensationLogs = [], earningLogs = [] }) {
     return (
         <div className="space-y-4">
 
@@ -496,14 +499,13 @@ function CompensationTab({ cp, earnings = [] }) {
                 </FieldGrid>
             </InfoCard>
 
-            {/* Earnings */}
+            {/* Current earnings */}
             <SectionDivider label="Additional earnings" />
 
             {earnings.length === 0 ? (
                 <EmptyState message="No additional earnings assigned." />
             ) : (
                 <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                    {/* Table header */}
                     <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-slate-100 bg-slate-50">
                         <p className="col-span-4 text-[10px] font-semibold uppercase tracking-[0.07em] text-slate-400">Earning</p>
                         <p className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.07em] text-slate-400 text-right">Amount</p>
@@ -511,16 +513,11 @@ function CompensationTab({ cp, earnings = [] }) {
                         <p className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.07em] text-slate-400 text-center">Type</p>
                         <p className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.07em] text-slate-400 text-right">Effective</p>
                     </div>
-
-                    {/* Table rows */}
                     <div className="divide-y divide-slate-100">
                         {earnings.map((row, i) => {
                             const earningName = row.earning?.name ?? `Earning #${row.earning_id}`;
                             return (
-                                <div
-                                    key={i}
-                                    className="grid grid-cols-12 gap-4 items-center px-5 py-3.5 hover:bg-slate-50/60 transition-colors"
-                                >
+                                <div key={i} className="grid grid-cols-12 gap-4 items-center px-5 py-3.5 hover:bg-slate-50/60 transition-colors">
                                     <div className="col-span-4">
                                         <p className="text-sm font-medium text-slate-800">{earningName}</p>
                                     </div>
@@ -547,27 +544,148 @@ function CompensationTab({ cp, earnings = [] }) {
                                     <div className="col-span-2 text-right">
                                         <p className="text-[11px] text-slate-600">{fmtDate(row.effective_date)}</p>
                                         {!row.is_continuous && row.end_date && (
-                                            <p className="text-[10px] text-slate-400 mt-0.5">
-                                                until {fmtDate(row.end_date)}
-                                            </p>
+                                            <p className="text-[10px] text-slate-400 mt-0.5">until {fmtDate(row.end_date)}</p>
                                         )}
                                     </div>
                                 </div>
                             );
                         })}
                     </div>
-
-                    {/* Footer: total */}
                     <div className="flex items-center justify-between px-5 py-3.5 border-t border-slate-100 bg-slate-50">
                         <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
                             {earnings.length} earning{earnings.length !== 1 ? "s" : ""}
                         </p>
                         <p className="text-sm font-semibold text-slate-900">
                             <span className="text-xs font-normal text-slate-400 mr-1">Total ₱</span>
-                            {fmtMoney(
-                                earnings.reduce((sum, r) => sum + Number(r.amount ?? 0), 0)
-                            )}
+                            {fmtMoney(earnings.reduce((sum, r) => sum + Number(r.amount ?? 0), 0))}
                         </p>
+                    </div>
+                </div>
+            )}
+
+            {/* Compensation change history */}
+            <SectionDivider label="Compensation change history" />
+
+            {compensationLogs.length === 0 ? (
+                <EmptyState message="No compensation change records." />
+            ) : (
+                <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                    <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
+                        <div className="flex items-center justify-center w-6 h-6 rounded-lg bg-white border border-slate-200 text-slate-500 shrink-0 shadow-sm">
+                            <Coins size={13} strokeWidth={2} />
+                        </div>
+                        <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.08em]">
+                            Compensation logs
+                        </p>
+                        <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-500 ring-1 ring-slate-200">
+                            {compensationLogs.length}
+                        </span>
+                    </div>
+                    <div className="divide-y divide-slate-100">
+                        {compensationLogs.map((log, i) => (
+                            <div key={i} className="px-5 py-4 hover:bg-slate-50/60 transition-colors">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="space-y-2">
+                                        <div className="grid grid-cols-3 gap-4 text-xs">
+                                            {[
+                                                { label: "Monthly", prev: log.prev_monthly_rate, next: log.new_monthly_rate },
+                                                { label: "Daily",   prev: log.prev_daily_rate,   next: log.new_daily_rate },
+                                                { label: "Hourly",  prev: log.prev_hourly_rate,  next: log.new_hourly_rate },
+                                            ].map(({ label, prev, next }) => (
+                                                <div key={label}>
+                                                    <p className="text-[10px] text-slate-400 mb-1">{label}</p>
+                                                    <p className="text-slate-400 line-through text-[11px]">₱{fmtMoney(prev)}</p>
+                                                    <p className="font-semibold text-slate-900 text-[13px]">₱{fmtMoney(next)}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {log.reason && (
+                                            <p className="text-xs text-slate-500 leading-relaxed max-w-sm">{log.reason}</p>
+                                        )}
+                                    </div>
+                                    <div className="text-right shrink-0">
+                                        <p className="text-[11px] font-medium text-slate-700">{fmtDate(log.effective_date)}</p>
+                                        <p className="text-[10px] text-slate-400 mt-0.5">{fmtDateTime(log.created_at)}</p>
+                                        {log.changed_by && (
+                                            <p className="text-[10px] text-slate-400 mt-0.5">
+                                                by <span className="font-medium text-slate-600">{log.changed_by}</span>
+                                            </p>
+                                        )}
+                                        {!log.is_processed && (
+                                            <span className="mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-semibold bg-amber-50 text-amber-600 ring-1 ring-amber-200 uppercase">
+                                                Pending
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Earning change history */}
+            <SectionDivider label="Earning change history" />
+
+            {earningLogs.length === 0 ? (
+                <EmptyState message="No earning change records." />
+            ) : (
+                <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                    <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
+                        <div className="flex items-center justify-center w-6 h-6 rounded-lg bg-white border border-slate-200 text-slate-500 shrink-0 shadow-sm">
+                            <BanknoteIcon size={13} strokeWidth={2} />
+                        </div>
+                        <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.08em]">
+                            Earning logs
+                        </p>
+                        <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-500 ring-1 ring-slate-200">
+                            {earningLogs.length}
+                        </span>
+                    </div>
+                    <div className="divide-y divide-slate-100">
+                        {earningLogs.map((log, i) => {
+                            const actionColors = {
+                                added:   "bg-emerald-50 text-emerald-700 ring-emerald-200",
+                                updated: "bg-blue-50 text-blue-700 ring-blue-200",
+                                removed: "bg-red-50 text-red-600 ring-red-200",
+                            };
+                            return (
+                                <div key={i} className="flex items-start justify-between gap-4 px-5 py-3.5 hover:bg-slate-50/60 transition-colors">
+                                    <div className="space-y-1.5">
+                                        <div className="flex items-center gap-2">
+                                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ring-1 ${actionColors[log.action] ?? "bg-slate-100 text-slate-500 ring-slate-200"}`}>
+                                                {log.action}
+                                            </span>
+                                            <p className="text-sm font-medium text-slate-800">{log.earning_name}</p>
+                                        </div>
+                                        <div className="flex items-center gap-3 text-xs text-slate-500">
+                                            {log.prev_amount != null && (
+                                                <span className="line-through text-slate-400">₱{fmtMoney(log.prev_amount)}</span>
+                                            )}
+                                            {log.new_amount != null && (
+                                                <span className="font-semibold text-slate-900">₱{fmtMoney(log.new_amount)}</span>
+                                            )}
+                                            {log.new_frequency && (
+                                                <Badge value={log.new_frequency} colorMap={FREQ_COLORS} />
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="text-right shrink-0">
+                                        <p className="text-[11px] font-medium text-slate-700">{fmtDate(log.effective_date)}</p>
+                                        {log.changed_by && (
+                                            <p className="text-[10px] text-slate-400 mt-0.5">
+                                                by <span className="font-medium text-slate-600">{log.changed_by}</span>
+                                            </p>
+                                        )}
+                                        {!log.is_processed && (
+                                            <span className="mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-semibold bg-amber-50 text-amber-600 ring-1 ring-amber-200 uppercase">
+                                                Pending
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             )}
@@ -646,6 +764,164 @@ function EmergencyTab({ ec }) {
     );
 }
 
+function ReassignmentTab({ reassignmentLogs = [] }) {
+    return (
+        <div className="space-y-4">
+            {reassignmentLogs.length === 0 ? (
+                <EmptyState message="No reassignment records." />
+            ) : (
+                <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                    <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
+                        <div className="flex items-center justify-center w-6 h-6 rounded-lg bg-white border border-slate-200 text-slate-500 shrink-0 shadow-sm">
+                            <ArrowLeftRight size={13} strokeWidth={2} />
+                        </div>
+                        <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.08em]">
+                            Reassignment logs
+                        </p>
+                        <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-500 ring-1 ring-slate-200">
+                            {reassignmentLogs.length}
+                        </span>
+                    </div>
+                    <div className="divide-y divide-slate-100">
+                        {reassignmentLogs.map((log, i) => (
+                            <div key={i} className="px-5 py-4 hover:bg-slate-50/60 transition-colors">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="space-y-2 min-w-0">
+                                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                                            <span className="text-slate-400">Position:</span>
+                                            <span className="font-medium text-slate-600">{log.prev_position_name ?? "—"}</span>
+                                            <span className="text-slate-300">→</span>
+                                            <span className="font-medium text-slate-900">{log.new_position_name ?? "—"}</span>
+                                        </div>
+                                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                                            <span className="text-slate-400">Department:</span>
+                                            <span className="font-medium text-slate-600">{log.prev_department_name ?? "—"}</span>
+                                            <span className="text-slate-300">→</span>
+                                            <span className="font-medium text-slate-900">{log.new_department_name ?? "—"}</span>
+                                        </div>
+                                        {log.prev_employment_type !== log.new_employment_type && (
+                                            <div className="flex flex-wrap items-center gap-2 text-xs">
+                                                <span className="text-slate-400">Type:</span>
+                                                <Badge value={log.prev_employment_type} colorMap={STATUS_COLORS} />
+                                                <span className="text-slate-300">→</span>
+                                                <Badge value={log.new_employment_type} colorMap={STATUS_COLORS} />
+                                            </div>
+                                        )}
+                                        {log.reason && (
+                                            <p className="text-xs text-slate-500 leading-relaxed max-w-sm">{log.reason}</p>
+                                        )}
+                                    </div>
+                                    <div className="text-right shrink-0">
+                                        <p className="text-[11px] font-medium text-slate-700">{fmtDate(log.effective_date)}</p>
+                                        <p className="text-[10px] text-slate-400 mt-0.5">{fmtDateTime(log.created_at)}</p>
+                                        {log.changed_by && (
+                                            <p className="text-[10px] text-slate-400 mt-0.5">
+                                                by <span className="font-medium text-slate-600">{log.changed_by}</span>
+                                            </p>
+                                        )}
+                                        {!log.is_processed && (
+                                            <span className="mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-semibold bg-amber-50 text-amber-600 ring-1 ring-amber-200 uppercase">
+                                                Pending
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── Reliever duties tab ──────────────────────────────────────────────────────
+
+const DUTY_STATUS_COLORS = {
+    scheduled: "bg-blue-50 text-blue-700 ring-blue-200",
+    ongoing:   "bg-emerald-50 text-emerald-700 ring-emerald-200",
+    completed: "bg-slate-100 text-slate-500 ring-slate-200",
+};
+
+function RelieverTab({ relieverDuties = [] }) {
+    if (relieverDuties.length === 0) {
+        return <EmptyState message="No reliever duty records." />;
+    }
+
+    return (
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
+                <div className="flex items-center justify-center w-6 h-6 rounded-lg bg-white border border-slate-200 text-slate-500 shrink-0 shadow-sm">
+                    <CalendarDays size={13} strokeWidth={2} />
+                </div>
+                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.08em]">
+                    Reliever duties
+                </p>
+                <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-500 ring-1 ring-slate-200">
+                    {relieverDuties.length}
+                </span>
+            </div>
+            <div className="divide-y divide-slate-100">
+                {relieverDuties.map((duty, i) => (
+                    <div key={i} className="px-5 py-4 hover:bg-slate-50/60 transition-colors">
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="space-y-2 min-w-0">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide ring-1 uppercase ${DUTY_STATUS_COLORS[duty.status] ?? "bg-slate-100 text-slate-500 ring-slate-200"}`}>
+                                        {duty.status}
+                                    </span>
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide ring-1 uppercase bg-slate-100 text-slate-600 ring-slate-200">
+                                        {duty.duty_type_label}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400">
+                                        {duty.dates?.length ?? 0} day{duty.dates?.length !== 1 ? "s" : ""}
+                                    </span>
+                                </div>
+                                <div className="text-xs text-slate-600 space-y-0.5">
+                                    <p>
+                                        <span className="text-slate-400">Location: </span>
+                                        {[duty.company_name, duty.branch_name].filter(Boolean).join(" · ") || "—"}
+                                    </p>
+                                    <p>
+                                        <span className="text-slate-400">Role: </span>
+                                        {[duty.position_name, duty.department_name].filter(Boolean).join(" · ") || "—"}
+                                    </p>
+                                    {duty.covered_name && (
+                                        <p>
+                                            <span className="text-slate-400">Covering for: </span>
+                                            {duty.covered_name}
+                                        </p>
+                                    )}
+                                    {duty.remarks && (
+                                        <p className="text-slate-500 italic mt-1">{duty.remarks}</p>
+                                    )}
+                                </div>
+                                {duty.dates?.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                        {duty.dates.slice(0, 5).map((d) => (
+                                            <span key={d} className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 ring-1 ring-blue-100">
+                                                {fmtDate(d)}
+                                            </span>
+                                        ))}
+                                        {duty.dates.length > 5 && (
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] text-slate-400">
+                                                +{duty.dates.length - 5} more
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="text-right shrink-0">
+                                <p className="text-[10px] text-slate-400">{fmtDateTime(duty.created_at)}</p>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function EmployeeProfile({
@@ -659,6 +935,10 @@ export default function EmployeeProfile({
     emergencyContacts,
     employeeEarnings = [],
     statusLogs = [],
+    reassignmentLogs = [],   
+    compensationLogs = [],   
+    earningLogs = [],        
+    relieverDuties = [],     
 }) {
     const [activeTab, setActiveTab] = useState("personal");
 
@@ -670,16 +950,32 @@ export default function EmployeeProfile({
     const we = Array.isArray(workExperiences)   ? workExperiences   : [];
     const ec = Array.isArray(emergencyContacts) ? emergencyContacts : [];
     const ee = Array.isArray(employeeEarnings)  ? employeeEarnings  : [];
+    const rl = Array.isArray(reassignmentLogs) ? reassignmentLogs : [];
+    const cl = Array.isArray(compensationLogs) ? compensationLogs : [];
+    const el = Array.isArray(earningLogs)      ? earningLogs      : [];
+    const rd = Array.isArray(relieverDuties)   ? relieverDuties   : [];
 
     return (
         <div className="rounded-2xl bg-white ring-1 ring-slate-200 overflow-hidden shadow-sm">
-
-            {/* Tab nav — full width, each tab gets an equal share */}
             <div className="flex items-stretch border-b border-slate-100 bg-white overflow-x-auto scrollbar-none">
                 {TABS.map(({ id, label, icon: Icon }) => {
-                    const isActive    = activeTab === id;
-                    const showDot     = id === "employment"   && statusLogs.length > 0;
-                    const earningsDot = id === "compensation" && ee.length > 0;
+                    const isActive = activeTab === id;
+
+                    // badge counts per tab
+                    const count =
+                        id === "employment"   ? statusLogs.length :
+                        id === "compensation" ? (compensationLogs.length + earningLogs.length) :
+                        id === "reassignment" ? rl.length : 
+                        id === "reliever"     ? rd.length :
+                        0;
+
+                    const dotColor =
+                        id === "employment"   ? "bg-orange-100 text-orange-600 ring-orange-200" :
+                        id === "compensation" ? "bg-emerald-100 text-emerald-600 ring-emerald-200" :
+                        id === "reassignment" ? "bg-violet-100 text-violet-600 ring-violet-200" :
+                        id === "reliever"     ? "bg-blue-100 text-blue-600 ring-blue-200" :
+                        "";
+
                     return (
                         <button
                             key={id}
@@ -687,8 +983,7 @@ export default function EmployeeProfile({
                             className={`
                                 relative flex flex-1 items-center justify-center gap-1.5
                                 whitespace-nowrap border-b-2 px-3 py-3.5
-                                text-[11px] font-medium transition-colors duration-150
-                                min-w-0
+                                text-[11px] font-medium transition-colors duration-150 min-w-0
                                 ${isActive
                                     ? "border-slate-900 text-slate-900"
                                     : "border-transparent text-slate-400 hover:text-slate-600"
@@ -697,14 +992,9 @@ export default function EmployeeProfile({
                         >
                             <Icon size={12} strokeWidth={2} className="flex-shrink-0" />
                             <span className="truncate">{label}</span>
-                            {showDot && (
-                                <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-orange-100 px-1 text-[9px] font-bold text-orange-600 ring-1 ring-orange-200 flex-shrink-0">
-                                    {statusLogs.length}
-                                </span>
-                            )}
-                            {earningsDot && (
-                                <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-100 px-1 text-[9px] font-bold text-emerald-600 ring-1 ring-emerald-200 flex-shrink-0">
-                                    {ee.length}
+                            {count > 0 && (
+                                <span className={`ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold ring-1 flex-shrink-0 ${dotColor}`}>
+                                    {count}
                                 </span>
                             )}
                         </button>
@@ -712,15 +1002,25 @@ export default function EmployeeProfile({
                 })}
             </div>
 
-            {/* Panel */}
             <div className="bg-slate-50/70 px-6 py-6 sm:px-8 sm:py-7 lg:px-10 lg:py-8">
                 {activeTab === "personal"     && <PersonalTab     pi={pi} employee={employee} />}
                 {activeTab === "employment"   && <EmploymentTab   ed={ed} statusLogs={statusLogs} />}
                 {activeTab === "govids"       && <GovIdsTab       gi={gi} />}
                 {activeTab === "bank"         && <BankTab         ba={ba} />}
-                {activeTab === "compensation" && <CompensationTab cp={cp} earnings={ee} />}
+                {activeTab === "compensation" && (
+                    <CompensationTab
+                        cp={cp}
+                        earnings={ee}
+                        compensationLogs={cl}   
+                        earningLogs={el}        
+                    />
+                )}
                 {activeTab === "experience"   && <ExperienceTab   we={we} />}
                 {activeTab === "emergency"    && <EmergencyTab    ec={ec} />}
+                {activeTab === "reassignment" && (
+                    <ReassignmentTab reassignmentLogs={rl} />  
+                )}
+                {activeTab === "reliever"     && <RelieverTab     relieverDuties={rd} />}
             </div>
         </div>
     );

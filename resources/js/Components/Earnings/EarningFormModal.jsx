@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
+import { Toggle } from "@/components/ui/toggle";
 
 const EMPTY = {
     name: "",
@@ -59,7 +59,7 @@ export default function EarningFormModal({ open, onClose, earning }) {
 
     return (
         <Dialog open={open} onOpenChange={handleClose}>
-            <DialogContent className="sm:max-w-lg">
+            <DialogContent aria-describedby={undefined} className="sm:max-w-lg">
                 <DialogHeader>
                     <DialogTitle>
                         {isEditing ? "Edit Earning" : "New Earning"}
@@ -124,15 +124,19 @@ export default function EarningFormModal({ open, onClose, earning }) {
                     </div>
 
                     {/* Is Active */}
-                    <div className="flex items-center gap-3">
-                        <Switch
-                            id="earning_active"
+                    <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                        <div>
+                            <p className={`text-sm font-medium ${data.is_active ? "text-slate-800" : "text-slate-400"}`}>
+                                {data.is_active ? "Active" : "Inactive"}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                                Inactive earnings won't appear in assignments
+                            </p>
+                        </div>
+                        <Toggle
                             checked={data.is_active}
                             onCheckedChange={(val) => setData("is_active", val)}
                         />
-                        <Label htmlFor="earning_active" className="cursor-pointer">
-                            Active
-                        </Label>
                     </div>
 
                     <DialogFooter className="gap-2 pt-2">

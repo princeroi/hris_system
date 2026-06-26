@@ -45,20 +45,17 @@ function Field({ label, required, error, children }) {
 }
 
 export default function AddEarningsModal({ employee, earnings = [], onClose }) {
-    // Pre-populate from existing employee earnings
     const existing = (employee.employee_earnings ?? []).map((ee) => ({
         earning_id:     String(ee.earning_id ?? ""),
         amount:         ee.amount ?? "",
         frequency:      ee.frequency ?? "semi-monthly",
         is_continuous:  ee.is_continuous ?? true,
-        effective_date: ee.effective_date
-            ? ee.effective_date.slice(0, 10)
-            : "",
+        effective_date: ee.effective_date ? ee.effective_date.slice(0, 10) : "",
         end_date:       ee.end_date ? ee.end_date.slice(0, 10) : "",
     }));
 
-    const [rows, setRows] = useState(existing.length > 0 ? existing : []);
-    const [errors, setErrors] = useState({});
+    const [rows, setRows]             = useState(existing.length > 0 ? existing : []);
+    const [errors, setErrors]         = useState({});
     const [processing, setProcessing] = useState(false);
 
     const usedIds = rows.map((r) => String(r.earning_id)).filter(Boolean);
@@ -68,11 +65,9 @@ export default function AddEarningsModal({ employee, earnings = [], onClose }) {
             const next = prev.map((r, i) =>
                 i === index ? { ...r, [field]: value } : r
             );
-            // clear end_date when switching to continuous
             if (field === "is_continuous" && value === true) {
                 next[index].end_date = "";
             }
-            // auto-fill amount from earning default
             if (field === "earning_id") {
                 const found = earnings.find((e) => String(e.id) === String(value));
                 if (found && !next[index].amount) {
@@ -83,12 +78,9 @@ export default function AddEarningsModal({ employee, earnings = [], onClose }) {
         });
     };
 
-    const addRow = () => setRows((prev) => [...prev, emptyRow()]);
-    const removeRow = (index) =>
-        setRows((prev) => prev.filter((_, i) => i !== index));
-
-    const rowError = (index, field) =>
-        errors[`employee_earnings.${index}.${field}`];
+    const addRow    = () => setRows((prev) => [...prev, emptyRow()]);
+    const removeRow = (index) => setRows((prev) => prev.filter((_, i) => i !== index));
+    const rowError  = (index, field) => errors[`employee_earnings.${index}.${field}`];
 
     const handleSubmit = () => {
         setProcessing(true);
@@ -276,9 +268,10 @@ export default function AddEarningsModal({ employee, earnings = [], onClose }) {
                                         </Select>
                                     </Field>
 
-                                    {/* Effective date */}
+                                    {/* Effective date — per row */}
                                     <Field
                                         label="Effective Date"
+                                        required
                                         error={rowError(index, "effective_date")}
                                     >
                                         <Input

@@ -19,15 +19,20 @@ class RelieverDuty extends Model
         'branch_id',
         'department_id',
         'position_id',
-        'dates',     
+        'dates',
+        'status',
+        'is_processed',
+        'processed_at',
         'remarks',
     ];
 
     protected $casts = [
-        'dates' => 'array',
+        'dates'        => 'array',
+        'is_processed' => 'boolean',
+        'processed_at' => 'datetime',
     ];
 
-    // ── Relationships ────────────────────────────────────────────────────────
+    // ── Relationships ─────────────────────────────────────────────────────────
 
     public function reliever(): BelongsTo
     {
@@ -59,31 +64,21 @@ class RelieverDuty extends Model
         return $this->belongsTo(Position::class);
     }
 
-    // ── Computed Attributes ──────────────────────────────────────────────────
+    // ── Computed Attributes ───────────────────────────────────────────────────
 
-    /**
-     * Earliest date in the dates array.
-     */
     public function getStartDateAttribute(): ?string
     {
         $dates = $this->dates ?? [];
         return count($dates) ? min($dates) : null;
     }
 
-    /**
-     * Latest date in the dates array.
-     */
     public function getEndDateAttribute(): ?string
     {
         $dates = $this->dates ?? [];
         return count($dates) ? max($dates) : null;
     }
 
-    /**
-     * Derive schedule status from dates array.
-     * Returns: 'scheduled' | 'ongoing' | 'completed'
-     */
-    public function getStatusAttribute(): string
+    public function computeStatus(): string
     {
         $today = Carbon::today()->toDateString();
         $dates = $this->dates ?? [];
@@ -99,9 +94,6 @@ class RelieverDuty extends Model
         return 'completed';
     }
 
-    /**
-     * Human-readable duty type label.
-     */
     public function getDutyTypeLabelAttribute(): string
     {
         return match ($this->duty_type) {
@@ -111,39 +103,12 @@ class RelieverDuty extends Model
         };
     }
 
-    // ── Scopes ───────────────────────────────────────────────────────────────
+    // ── Scopes ────────────────────────────────────────────────────────────────
 
-    /**
-     * Duties that contain at least one date on or after today
-     * and at least one date on or before today.
-     * Using JSON_CONTAINS / JSON_SEARCH is DB-specific, so we use
-     * a raw expression on the serialised JSON for broad compatibility.
-     *
-     * For MySQL / MariaDB you can replace this with a generated column
-     * index once volume demands it.
-     */
-    public function scopeOngoing($query)
+    public function scopePendingToday($query)
     {
-        $today = Carbon::today()->toDateString();
-
         return $query
-            ->whereRaw("JSON_SEARCH(dates, 'one', ?) IS NOT NULL", [$today])
-            // OR has a date >= today and a date <= today (spanning range with gaps)
-            ->orWhere(function ($q) use ($today) {
-                $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(dates, '$[0]')) <= ?", [$today])
-                  ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(dates, '$[#-1]')) >= ?", [$today]);
-            });
-    }
-
-    public function scopeScheduled($query)
-    {
-        $today = Carbon::today()->toDateString();
-        return $query->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(dates, '$[0]')) > ?", [$today]);
-    }
-
-    public function scopeCompleted($query)
-    {
-        $today = Carbon::today()->toDateString();
-        return $query->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(dates, '$[#-1]')) < ?", [$today]);
+            ->where('is_processed', false)
+            ->whereNotNull('dates');
     }
 }
